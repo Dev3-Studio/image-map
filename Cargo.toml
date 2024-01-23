@@ -6,6 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = "0.24.8"
+avif = "0.0.0"
+image = { version = "0.24.8", features = ["webp-encoder", "avif-encoder", "avif"] }
+nasm-rs = "0.3.0"
 walkdir = "2.4.0"
-webp = "0.2.6"
+#webp = "0.2.6"
+
+[features]
+
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
