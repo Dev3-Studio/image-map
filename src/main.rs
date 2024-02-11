@@ -1,17 +1,18 @@
-//program to create a collage of images and export them in webp format along with a json file containing the image
-// names and their bounding boxes
+//program to create a collage of images and export them in avif format along with a json file containing the image
+// ids and their bounding boxes
 
+
+use std::char::MAX;
 use std::cmp::max;
+use std::collections::HashMap;
+use std::iter::Map;
+use std::path::Iter;
+use std::ptr::null;
 use image::codecs::avif::AvifEncoder;
-// use image::codecs::avif::AvifEncoder;
-use image::codecs::jpeg::JpegEncoder;
-use image::codecs::webp::{WebPEncoder, WebPQuality};
-// use image::ImageFormat::Avif;
-// use webp::{Encoder, PixelLayout, WebPImage, WebPMemory};
-// use std::io::Cursor;
-// use image::GenericImageView;
+use serde_json::map::{IterMut, Values};
+use serde_json::Value;
 use walkdir::WalkDir;
-// use image::io::Reader as ImageReader;
+
 struct  ImageCoords {
     // name: String,
     x: u32,
@@ -32,28 +33,31 @@ fn crop_image(img: image::DynamicImage, nwidth: u32)->image::DynamicImage{
 }
 
 //create a collage of square images using image crate
-fn create_collage(){
-    let input_path = "input/10k";
-    let img_width = 100;
+fn create_collage(path: &str, width: u32, json: serde_json::Value) {
+    let input_path = path;
+    let base_width = width;
 
     let mut img_vec = vec![];
     let mut coords_vec = vec![];
 
-
+    let layout_json = json.as_object().unwrap().into_iter();
+    // traverse_json(layout_json, 0, "children");
     // get total number of files to determine final image dimensions
     let num_files = WalkDir::new(input_path).into_iter().count();
 
     let dimensions = (num_files as f64).sqrt() as u32;
     let mut total_width = 0;
-    // let mut j = 0;
+    let mut i = 0;
     //iterate through all files in input and add them to the array, cropped to squares
     for entry in std::fs::read_dir(input_path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        // let imgName = path.file_name().unwrap().to_str().unwrap()
+        //determine image size based on json file
+        // layout_json
+
         //crop image to square
         let mut img = image::open(path).unwrap();
-        img = crop_image(img, img_width);
+        img = crop_image(img, base_width);
         // coords_vec.push(ImageCoords{
         //     // name: imgName.to_string(),
         //     x: total_width,
@@ -63,11 +67,12 @@ fn create_collage(){
         // });
         total_width += img.width();
         img_vec.push(img);
+        i+=1;
     }
 
     //get the size of the collage
-    let imgx = img_width * dimensions;
-    let imgy = img_width * dimensions;
+    let imgx = base_width * dimensions;
+    let imgy = base_width * dimensions;
 
     let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
     println!("Image size: {}x{}", dimensions, dimensions);
@@ -96,17 +101,57 @@ fn create_collage(){
     imgbuf.write_with_encoder(encoder);
 
 
-
+    //debugging
+    let coord_writer = std::fs::File::create("output/coords.json").unwrap();
+    // serde_json::to_writer_pretty(coord_writer, &coords_vec.to).unwrap();
     // for i in coords_vec.iter() {
     //     println!("{} {} {}", i.x, i.y, i.width);
     // }
 }
 
+fn parse_json() -> serde_json::Value{
+    let file = std::fs::read_to_string("input/grid.json").unwrap();
+    return serde_json::from_str(&*file).expect("JSON was not well-formatted");
+
+}
+
+
+fn traverse_json(json: Value, arr: &mut Vec<&String>) -> i32{
+    return traverse_json_rec(json.as_object().unwrap(), 0, arr);
+}
+
+//recursively decent through all 4 branches of the json file to find the depth of the tree
+fn traverse_json_rec(json: &serde_json::map::Map<String, Value>, depth: i32, arr: &mut Vec<&String>) -> i32 {
+    let mut max_depth = depth;
+    json.into_iter().for_each(|(key, value)| {
+        //base case
+        arr.push(key);
+
+        if key == "" {
+            // arr.push(depth);
+        }
+
+        max_depth = max(traverse_json_rec(value.as_object().unwrap(), depth + 1, arr), max_depth);
+    });
+
+    return max_depth;
+}
+
 
 fn main() {
-    let start = std::time::Instant::now();
-    create_collage();
-    println!("Time taken: {}s", start.elapsed().as_secs());
+    // let start = std::time::Instant::now();
+    let mut arr: Vec<&String> = vec![];
+    let json = parse_json();
+    // let j = json.as_;
+    // println!("{}", j.v);
+    let x = traverse_json(json, &mut arr);
+    for v in arr {
+        println!("{}", v);
+    }
+
+    // create_collage("input/10k", 100, json);
+    // println!("Time taken: {}s", start.elapsed().as_secs());
+
 }
 
 

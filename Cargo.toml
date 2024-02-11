@@ -10,7 +10,10 @@ avif = "0.0.0"
 image = { version = "0.24.8", features = ["webp-encoder", "avif-encoder", "avif"] }
 nasm-rs = "0.3.0"
 walkdir = "2.4.0"
+rand = { version = "0.8.5", features = [] }
+serde_json = { version = "1.0.111", features = [] }
 #webp = "0.2.6"
+serde = { version = "1.0.104", features = ["derive"] }
 
 [features]
 
@@ -21,4 +24,3 @@ opt-level = 0
 [profile.release]
 opt-level = 3
 lto = true
-
