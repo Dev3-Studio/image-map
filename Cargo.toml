@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 avif = "0.0.0"
-image = { version = "0.24.8", features = ["webp-encoder", "avif-encoder", "avif"] }
+image = { version = "0.24.8", features = ["webp-encoder", "avif-encoder"] }
 nasm-rs = "0.3.0"
 walkdir = "2.4.0"
 rand = { version = "0.8.5", features = [] }
