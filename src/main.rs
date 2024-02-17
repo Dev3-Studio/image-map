@@ -1,16 +1,8 @@
 //program to create a collage of images and export them in avif format along with a json file containing the image
 // ids and their bounding boxes
 
-
-use std::char::MAX;
 use std::cmp::max;
-use std::collections::HashMap;
-use std::iter::Map;
-use std::ops::Deref;
-use std::path::Iter;
-use std::ptr::null;
 use image::codecs::avif::AvifEncoder;
-use serde_json::map::{IterMut, Values};
 use serde_json::Value;
 use walkdir::WalkDir;
 
@@ -34,7 +26,7 @@ fn crop_image(img: image::DynamicImage, nwidth: u32)->image::DynamicImage{
 }
 
 //create a collage of square images using image crate
-fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>) {
+fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec<i32>>) {
     let input_path = path;
     let base_width = width;
 
@@ -43,14 +35,10 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>) {
 
     // get total number of files to determine final image dimensions
     let num_files = WalkDir::new(input_path).into_iter().count();
-    // let mut depth_count: Vec<i32> = vec![];
-    // while depth_count[depth_count.len() - 1] != 0 {
-    //     depth_count.push(
-    //         depth_arr.iter().filter(|&n| *n == depth_count[depth_count.len() - 1]).count() as i32
-    //     )
-    // }
+
     //todo: calculate actual dimensions
-    let dimensions = ((num_files) as f64).sqrt() as u32;
+    // let dimensions = ((num_files) as f64).sqrt() as u32;
+    let dimensions = 256;
     let mut total_width = 0;
     let mut i = 0;
     //iterate through all files in input and add them to the array, cropped to squares
@@ -62,14 +50,8 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>) {
 
         //crop image to square
         let mut img = image::open(path).unwrap();
-        img = crop_image(img, base_width* (2u32).pow((3 - depth) as u32));
-        // coords_vec.push(ImageCoords{
-        //     // name: imgName.to_string(),
-        //     x: total_width,
-        //     y: 0,
-        //     width: img.width(),
-        //     // height: img.height(),
-        // });
+        img = crop_image(img, base_width* (2u32).pow((7 - depth) as u32));
+
         total_width += img.width();
         img_vec.push(img);
         i+=1;
@@ -85,24 +67,21 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>) {
 
     //iterate through the array and paste the images on the collage
     for (i, img) in img_vec.iter().enumerate() {
-        //todo: calculate x and y
-        let x = (i as u32 % dimensions as u32) * img.width();
-        let y = (i as u32 / dimensions as u32) * img.height();
+        let (x, y) = calculate_coords(&path_arr[i], imgx as i32);
         image::imageops::overlay(&mut imgbuf, img, x as i64, y as i64);
-
+        // println!("{}", i);
         coords_vec.push(ImageCoords{
             // name: imgName.to_string(),
-            x,
-            y,
+            x: x as u32,
+            y: y as u32,
             width: img.width(),
         });
     }
 
-    // imgbuf.save_with_format("output/collage.webp", image::ImageFormat::WebP).unwrap();
 
     //avif format
     let mut writer = std::fs::File::create("output/collage.avif").unwrap();
-    let encoder = AvifEncoder::new_with_speed_quality(&mut writer, 1, 100); //quality 25 is good compromise
+    let encoder = AvifEncoder::new_with_speed_quality(&mut writer, 1, 25); //quality 25 is good compromise
     imgbuf.write_with_encoder(encoder).expect("TODO: panic message");
 
 
@@ -115,7 +94,7 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>) {
 }
 
 fn parse_json() -> serde_json::Value{
-    let file = std::fs::read_to_string("input/grid.json").unwrap();
+    let file = std::fs::read_to_string("./input/grid.json").unwrap();
     return serde_json::from_str(&*file).expect("JSON was not well-formatted");
 
 }
@@ -149,33 +128,47 @@ fn traverse_json_rec(json: &serde_json::map::Map<String, Value>, depth: i32, arr
     return 0;
 }
 
-// fn traverse_json_bf(json: &serde_json::map::Map<String, Value>){
-//     let queue = [];
-//
-// }
 
+//calculate the coordinates for the top left corner of each image
+fn calculate_coords(path_arr: &Vec<i32>, image_width: i32) -> (i32, i32) {
+    let mut x = 0;
+    let mut y = 0;
+    let mut i = 1;
+    for num in path_arr.iter() {
+        match num {
+            1 => {},
+            2 => x += image_width /2i32.pow(i),
+            3 => y += image_width /2i32.pow(i),
+            4 => {
+                x += image_width /2i32.pow(i);
+                y += image_width /2i32.pow(i);
+            },
+            _ => {}
+        }
+        i += 1;
+    }
+    return (x, y);
+}
 
 fn main() {
-    // let start = std::time::Instant::now();
+    let start = std::time::Instant::now();
     let mut depth_arr: Vec<i32> = vec![];
     let mut path_arr: Vec<Vec<i32>> = vec![];
-    for _ in 0..101 {
+    for _ in 0..10000 {
         path_arr.push(vec![]);
     }
     let json = parse_json();
     // let j = json.as_;
     // println!("{}", j.v);
-    let x = traverse_json(json, &mut depth_arr, &mut path_arr);
+    let _x = traverse_json(json, &mut depth_arr, &mut path_arr);
 
-    // create_collage("input/100", 100, depth_arr);
-    // println!("Time taken: {}s", start.elapsed().as_secs());
+    create_collage("input/10k", 30, depth_arr, path_arr);
+    println!("Time taken: {}s", start.elapsed().as_secs());
 
-    for i in path_arr.iter() {
-        for j in i.iter() {
-            print!("{} ", j);
-        }
-        println!();
-    }
+    // for i in path_arr.iter() {
+    //     let (x, y) = calculate_coords(i, 256*50);
+    //     println!("{} {}", x, y);
+    // }
 
 }
 
