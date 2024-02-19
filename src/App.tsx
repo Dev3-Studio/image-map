@@ -17,38 +17,9 @@ interface imageCoords{
 }
 
 
-//calculate the coordinates for the top left corner of an image
-// function calculateCoords(pathArr: number[], image_width: number): coords {
-//     let x = 0;
-//     let y = 0;
-//     let i = 1;
-//     for (const num of pathArr) {
-//         switch (num) {
-//             case 1:
-//                 break;
-//             case 2:
-//                 x += image_width / 2 ** i;
-//                 break;
-//             case 3:
-//                 y += image_width / 2 ** i;
-//                 break;
-//             case 4:
-//                 x += image_width / 2 ** i;
-//                 y += image_width / 2 ** i;
-//                 break;
-//             default:
-//                 break;
-//         }
-//         i ++;
-//     }
-//     return {x, y};
-// }
-
 function App() {
     const handleClick = () => {
-        console.log('absolute: ' + mousePos.x + ', ' + mousePos.y);
         console.log('relative: ' + relativeMousePos.x + ', ' + relativeMousePos.y);
-
         let i = 0;
         for (const coords of coordsList){
             i++;
@@ -56,40 +27,23 @@ function App() {
             if (relativeMousePos.x > coords.x && relativeMousePos.x < coords.x + coords.width && relativeMousePos.y > coords.y && relativeMousePos.y < coords.y + coords.width){
                 console.log('clicked on image' + i);
                 setSelectedImage(`${i-1}.jpg`);
-                if (dialog) dialog.show();
+                // if (dialog) dialog.show();
                 console.log(selectedImage);
             }
 
         }
     }
-    const handleZoom = (ref: ReactZoomPanPinchRef, event) => {
-        console.log(ref.state.scale);
+    const handleZoom = (ref: ReactZoomPanPinchRef) => {
         setZoom(ref.state.scale);
         // setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
     }
     const handlePan = (ref: ReactZoomPanPinchRef, event) => {
-
-        setRelativeMousePos({ x: (mousePos.x - ref.state.positionX) / zoom, y: (mousePos.y - ref.state.positionY) / zoom})
+        setRelativeMousePos({ x: (event.clientX - ref.state.positionX) / zoom, y: (event.clientY - ref.state.positionY) / zoom})
     }
     const dialog: HTMLDialogElement|null = document.getElementById('imageOverlay') as HTMLDialogElement|null;
     const [selectedImage, setSelectedImage] = useState<string|null>(null);
-    const [mousePos, setMousePos] = useState<coords>({x: 0, y: 0});
     const [relativeMousePos, setRelativeMousePos] = useState<coords>({x: 0, y: 0});
     const [zoom, setZoom] = useState<number>(1);
-    useEffect(() => {
-        const handleMouseMove = (event) => {
-            setMousePos({ x: event.clientX, y: event.clientY });
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-
-        return () => {
-            window.removeEventListener(
-                'mousemove',
-                handleMouseMove
-            );
-        };
-    }, [mousePos]);
 
   return (
     <div className={'container'} onClick={handleClick}>
@@ -101,12 +55,12 @@ function App() {
 
             <img src={collage} alt="collage" id={'collage'} onClick={() => handleClick()}/>
             </TransformComponent>
-            {/*<ImageOverlay filename={selectedImage} onClick={()=> {*/}
-            {/*    dialog?.close()*/}
-            {/*    setSelectedImage(null)*/}
-            {/*}}/>*/}
-        </TransformWrapper>
 
+        </TransformWrapper>
+        <ImageOverlay filename={selectedImage} title={'Example Title'} onClick={()=> {
+            dialog?.close()
+            setSelectedImage(null)
+        }}/>
     </div>
   )
 }

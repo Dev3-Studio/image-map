@@ -1,11 +1,12 @@
-function ImageOverlay({filename, onClick}: { filename: string|null,  onClick: () => void }) {
+import './ImageOverlay.css'
+function ImageOverlay({filename, title, onClick}: { filename: string|null, title:string, onClick: () => void }) {
     return(
-        <dialog id={'imageOverlay'}>
+        <div id={'imageOverlay'}>
             <img src={`../public/fullres/${filename}`} alt="overlay" className="overlay" />
             <h1>Example Title</h1>
             <p>Example Description</p>
             <button onClick={()=> onClick}>x</button>
-        </dialog>
+        </div>
     )
 }
 

@@ -1,14 +1,15 @@
 
-.imageOverlay{
+#imageOverlay{
     position: fixed;
-    /*top: 0;*/
-    /*left: 0;*/
+    top: 0;
+    left: 0;
+    height: 100vh;
     /*right: 0;*/
     /*bottom: 0;*/
     z-index: 100;
     /*display: flex;*/
     /*justify-content: center;*/
     /*align-items: center;*/
-    /*background-color: rgba(26, 26, 26, 0.27);*/
-    transform: translate(-50%, -50%);
+    background-color: rgba(26, 26, 26, 0.5);
+
 }
