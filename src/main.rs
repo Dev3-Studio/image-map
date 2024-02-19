@@ -3,6 +3,8 @@
 
 use std::cmp::max;
 use image::codecs::avif::AvifEncoder;
+use serde::{Serialize, Serializer};
+use serde::ser::SerializeStruct;
 use serde_json::Value;
 use walkdir::WalkDir;
 
@@ -12,6 +14,19 @@ struct  ImageCoords {
     y: u32,
     width: u32,
     // height: u32,
+}
+
+impl Serialize for ImageCoords{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("ImageCoords", 3)?;
+        state.serialize_field("x", &self.x)?;
+        state.serialize_field("y", &self.y)?;
+        state.serialize_field("width", &self.width)?;
+        state.end()
+    }
 }
 
 fn crop_image(img: image::DynamicImage, nwidth: u32)->image::DynamicImage{
@@ -61,14 +76,14 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec
     let imgx = base_width * dimensions;
     let imgy = base_width * dimensions;
 
-    let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
+    // let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
     println!("Image size: {}x{}", dimensions, dimensions);
     println!("Image Pixels: {}x{}", imgx, imgy);
 
     //iterate through the array and paste the images on the collage
     for (i, img) in img_vec.iter().enumerate() {
         let (x, y) = calculate_coords(&path_arr[i], imgx as i32);
-        image::imageops::overlay(&mut imgbuf, img, x as i64, y as i64);
+        // image::imageops::overlay(&mut imgbuf, img, x as i64, y as i64);
         // println!("{}", i);
         coords_vec.push(ImageCoords{
             // name: imgName.to_string(),
@@ -82,12 +97,12 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec
     //avif format
     let mut writer = std::fs::File::create("output/collage.avif").unwrap();
     let encoder = AvifEncoder::new_with_speed_quality(&mut writer, 1, 25); //quality 25 is good compromise
-    imgbuf.write_with_encoder(encoder).expect("TODO: panic message");
+    // imgbuf.write_with_encoder(encoder).expect("TODO: panic message");
 
 
     //debugging
     let coord_writer = std::fs::File::create("output/coords.json").unwrap();
-    // serde_json::to_writer_pretty(coord_writer, &coords_vec.to).unwrap();
+    serde_json::to_writer_pretty(coord_writer, &coords_vec).unwrap();
     // for i in coords_vec.iter() {
     //     println!("{} {} {}", i.x, i.y, i.width);
     // }
@@ -114,7 +129,6 @@ fn traverse_json_rec(json: &serde_json::map::Map<String, Value>, depth: i32, arr
         //base case
         if value == &Value::Null {
             arr.push(depth);
-            // println!("{:?}" , current_path);
             for el in current_path.into_iter() {
                 path_arr[*index as usize].push(*el);
             }
@@ -129,7 +143,7 @@ fn traverse_json_rec(json: &serde_json::map::Map<String, Value>, depth: i32, arr
 }
 
 
-//calculate the coordinates for the top left corner of each image
+//calculate the coordinates for the top left corner of an image
 fn calculate_coords(path_arr: &Vec<i32>, image_width: i32) -> (i32, i32) {
     let mut x = 0;
     let mut y = 0;
