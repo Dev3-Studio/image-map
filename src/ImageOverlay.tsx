@@ -5,7 +5,7 @@ function ImageOverlay({filename, title, onClick}: { filename: string|null, title
             <img src={`../fullres/${filename}`} alt="overlay" className="overlay" />
             <h1>{title}</h1>
             <p>Example Description</p>
-            <button onClick={()=> onClick}>x</button>
+            <button onClick={onClick}>x</button>
         </div>
     )
 }
