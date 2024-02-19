@@ -1,8 +1,8 @@
-import collage from '/collage3.webp'
+import collage from '/collage.webp'
 import './App.css'
 import {DialogHTMLAttributes, useEffect, useState} from "react";
 import {TransformWrapper, TransformComponent, ReactZoomPanPinchRef} from "react-zoom-pan-pinch";
-import coordsjson from '../public/coords4999.json';
+import coordsjson from '../public/coords.json';
 import ImageOverlay from "./ImageOverlay.tsx";
 const coordsList = coordsjson as imageCoords[];
 interface coords{
