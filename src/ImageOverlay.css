@@ -13,3 +13,8 @@
     background-color: rgba(26, 26, 26, 0.5);
 
 }
+
+.overlay{
+    width: 300px;
+    padding: 3rem;
+}

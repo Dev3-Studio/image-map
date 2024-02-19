@@ -20,7 +20,8 @@ interface imageCoords{
 
 function App() {
     const handleClick = () => {
-        // console.log('relative: ' + relativeMousePos.x + ', ' + relativeMousePos.y);
+
+        console.log('relative: ' + relativeMousePos.x + ', ' + relativeMousePos.y);
         let i = 0;
         for (const coords of coordsList){
             i++;
@@ -29,7 +30,6 @@ function App() {
                 // console.log('clicked on image' + i);
                 setSelectedImage(`${i-1}.jpg`);
                 setDialogOpen(true);
-                console.log(dialogOpen);
                 // if (dialog) dialog.show();
                 // console.log(selectedImage);
             }
@@ -41,7 +41,8 @@ function App() {
         // setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
     }
     const handlePan = (ref: ReactZoomPanPinchRef, event: TouchEvent | MouseEvent) => {
-
+        console.log(ref.state.positionX)
+        console.log('y' + ref.state.positionY)
         if ("clientX" in event) {
             setRelativeMousePos({
                 x: (event.clientX - ref.state.positionX) / zoom,
@@ -56,27 +57,26 @@ function App() {
 
     function closeDialog() {
         setDialogOpen(false);
-        console.log(dialogOpen);
     }
 
   return (
 
     <div className={'container'}>
         <div className={'map'} onClick={handleClick}>
-            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1}
+            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={0.5} doubleClick={{ disabled: true }}
                               onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
                               onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
             >
                 <TransformComponent>
                     <img src={collage} alt="collage" id={'collage'}/>
                 </TransformComponent>
-
+                <Toolbar/>
             </TransformWrapper>
         </div>
         {dialogOpen && <ImageOverlay filename={selectedImage} title={selectedImage!} onClick={()=>
             closeDialog()}/>}
 
-        <Toolbar/>
+
     </div>
   )
 }

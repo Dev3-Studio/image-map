@@ -18,5 +18,18 @@
 }
 
 #collage{
-  /*position: absolute;*/
+  display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.map{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-items: center;
+  align-items: center;
+  justify-content: center;
+    align-content: center;
+
 }
