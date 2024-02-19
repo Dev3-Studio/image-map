@@ -1,4 +1,4 @@
-import collage from '/collage.avif'
+import collage from '/collage.webp'
 import './App.css'
 import {DialogHTMLAttributes, useEffect, useState} from "react";
 import {TransformWrapper, TransformComponent, ReactZoomPanPinchRef} from "react-zoom-pan-pinch";
@@ -46,7 +46,9 @@ interface imageCoords{
 
 function App() {
     const handleClick = () => {
-        console.log(relativeMousePos);
+        console.log('absolute: ' + mousePos.x + ', ' + mousePos.y);
+        console.log('relative: ' + relativeMousePos.x + ', ' + relativeMousePos.y);
+
         let i = 0;
         for (const coords of coordsList){
             i++;
@@ -54,23 +56,26 @@ function App() {
             if (relativeMousePos.x > coords.x && relativeMousePos.x < coords.x + coords.width && relativeMousePos.y > coords.y && relativeMousePos.y < coords.y + coords.width){
                 console.log('clicked on image' + i);
                 setSelectedImage(`${i-1}.jpg`);
-                dialog.show();
+                if (dialog) dialog.show();
                 console.log(selectedImage);
             }
 
         }
     }
     const handleZoom = (ref: ReactZoomPanPinchRef, event) => {
-
-        setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
+        console.log(ref.state.scale);
+        setZoom(ref.state.scale);
+        // setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
     }
     const handlePan = (ref: ReactZoomPanPinchRef, event) => {
-        setRelativeMousePos({ x: mousePos.x + ref.state.positionX, y: mousePos.y + ref.state.positionY })
+
+        setRelativeMousePos({ x: (mousePos.x - ref.state.positionX) / zoom, y: (mousePos.y - ref.state.positionY) / zoom})
     }
-    const dialog: DialogHTMLAttributes<HTMLElement> = document.getElementById('imageOverlay');
+    const dialog: HTMLDialogElement|null = document.getElementById('imageOverlay') as HTMLDialogElement|null;
     const [selectedImage, setSelectedImage] = useState<string|null>(null);
     const [mousePos, setMousePos] = useState<coords>({x: 0, y: 0});
     const [relativeMousePos, setRelativeMousePos] = useState<coords>({x: 0, y: 0});
+    const [zoom, setZoom] = useState<number>(1);
     useEffect(() => {
         const handleMouseMove = (event) => {
             setMousePos({ x: event.clientX, y: event.clientY });
@@ -88,14 +93,20 @@ function App() {
 
   return (
     <div className={'container'} onClick={handleClick}>
-        <ImageOverlay filename={selectedImage} onClick={()=>{}}/>
+
         <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1}
                           onZoomStop={(ref: ReactZoomPanPinchRef, event) => handleZoom(ref, event)}
                           onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}>
             <TransformComponent>
+
             <img src={collage} alt="collage" id={'collage'} onClick={() => handleClick()}/>
             </TransformComponent>
+            {/*<ImageOverlay filename={selectedImage} onClick={()=> {*/}
+            {/*    dialog?.close()*/}
+            {/*    setSelectedImage(null)*/}
+            {/*}}/>*/}
         </TransformWrapper>
+
     </div>
   )
 }

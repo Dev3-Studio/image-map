@@ -1,14 +1,14 @@
 
 .imageOverlay{
-    /*position: absolute;*/
+    position: fixed;
     /*top: 0;*/
     /*left: 0;*/
     /*right: 0;*/
     /*bottom: 0;*/
-    z-index: 1;
+    z-index: 100;
     /*display: flex;*/
     /*justify-content: center;*/
     /*align-items: center;*/
     /*background-color: rgba(26, 26, 26, 0.27);*/
-    /*transform: translate(-50%, -50%);*/
+    transform: translate(-50%, -50%);
 }
