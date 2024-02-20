@@ -26,6 +26,7 @@
 .map{
   width: 100%;
   height: 100%;
+  left: 3273px;
   display: flex;
   justify-items: center;
   align-items: center;
@@ -33,3 +34,13 @@
     align-content: center;
 
 }
+
+/*.centered {*/
+/*  position: relative;*/
+/*  display: flex;*/
+/*  justify-content: center;*/
+/*    align-items: center;*/
+
+/*  z-index: 1000;*/
+
+/*}*/

@@ -2,7 +2,7 @@ import collage from '/collage.webp'
 import './App.css'
 import {useState} from "react";
 import {TransformWrapper, TransformComponent, ReactZoomPanPinchRef} from "react-zoom-pan-pinch";
-import coordsjson from '../public/coords.json';
+import coordsjson from './assets/coords.json';
 import ImageOverlay from "./ImageOverlay.tsx";
 const coordsList = coordsjson as imageCoords[];
 import Toolbar from "./Toolbar.tsx";
@@ -30,6 +30,7 @@ function App() {
                 // console.log('clicked on image' + i);
                 setSelectedImage(`${i-1}.jpg`);
                 setDialogOpen(true);
+                return;
                 // if (dialog) dialog.show();
                 // console.log(selectedImage);
             }
@@ -63,11 +64,11 @@ function App() {
 
     <div className={'container'}>
         <div className={'map'} onClick={handleClick}>
-            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={0.5} doubleClick={{ disabled: true }}
+            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1} doubleClick={{ disabled: true }} centerOnInit={true}
                               onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
                               onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
             >
-                <TransformComponent>
+                <TransformComponent contentClass={'map'}>
                     <img src={collage} alt="collage" id={'collage'}/>
                 </TransformComponent>
                 <Toolbar/>
