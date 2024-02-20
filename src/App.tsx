@@ -1,4 +1,4 @@
-import collage from '/collage3.webp'
+import collage from '/collage.webp'
 import './App.css'
 import {useState} from "react";
 import {TransformWrapper, TransformComponent, ReactZoomPanPinchRef} from "react-zoom-pan-pinch";
@@ -65,14 +65,14 @@ function App() {
   return (
 
     <div className={'container'}>
-        <div className={'map'} onClick={handleClick}>
+        <div onClick={handleClick} className={'map'}>
             <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={0.1} doubleClick={{ disabled: true }} centerOnInit={true}
                               onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
                               onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
             >
-                <TransformComponent contentClass={'map'}>
-                    {(zoom < 0.5) && <img src={collage} alt="collage" id={'collage'}/>}
-                    {(zoom >= 0.5) && <ImageGrid />}
+                <TransformComponent contentClass={'transformComponent'}>
+                    {<img src={collage} alt="collage" id={'collage'}/>}
+                    {/*{(zoom >= 0.5) && <ImageGrid />}*/}
                 </TransformComponent>
                 <Toolbar/>
             </TransformWrapper>
