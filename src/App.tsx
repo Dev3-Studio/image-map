@@ -1,4 +1,4 @@
-import collage from '/collage.webp'
+import collage from '/collage3.webp'
 import './App.css'
 import {useState} from "react";
 import {TransformWrapper, TransformComponent, ReactZoomPanPinchRef} from "react-zoom-pan-pinch";
@@ -6,6 +6,7 @@ import coordsjson from './assets/coords.json';
 import ImageOverlay from "./ImageOverlay.tsx";
 const coordsList = coordsjson as imageCoords[];
 import Toolbar from "./Toolbar.tsx";
+import ImageGrid from "./ImageGrid.tsx";
 interface coords{
     x: number,
     y: number
@@ -39,6 +40,7 @@ function App() {
     }
     const handleZoom = (ref: ReactZoomPanPinchRef) => {
         setZoom(ref.state.scale);
+        console.log('zoom' + ref.state.scale)
         // setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
     }
     const handlePan = (ref: ReactZoomPanPinchRef, event: TouchEvent | MouseEvent) => {
@@ -64,12 +66,13 @@ function App() {
 
     <div className={'container'}>
         <div className={'map'} onClick={handleClick}>
-            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1} doubleClick={{ disabled: true }} centerOnInit={true}
+            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={0.1} doubleClick={{ disabled: true }} centerOnInit={true}
                               onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
                               onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
             >
                 <TransformComponent contentClass={'map'}>
-                    <img src={collage} alt="collage" id={'collage'}/>
+                    {(zoom < 0.5) && <img src={collage} alt="collage" id={'collage'}/>}
+                    {(zoom >= 0.5) && <ImageGrid />}
                 </TransformComponent>
                 <Toolbar/>
             </TransformWrapper>
