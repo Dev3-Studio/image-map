@@ -66,11 +66,12 @@ function App() {
 
     <div className={'container'}>
         <div onClick={handleClick} className={'map'}>
-            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={0.1} doubleClick={{ disabled: true }} centerOnInit={true}
-                              onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
-                              onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
+            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1} doubleClick={{ disabled: true }}
+                              centerOnInit={true} onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
+                              onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)
+            }
             >
-                <TransformComponent contentClass={'transformComponent'}>
+                <TransformComponent  wrapperClass={'transformWrapper'} contentClass={'transformComponent'}>
                     {<img src={collage} alt="collage" id={'collage'}/>}
                     {/*{(zoom >= 0.5) && <ImageGrid />}*/}
                 </TransformComponent>
