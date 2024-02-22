@@ -17,7 +17,8 @@
 
 .transformWrapper {
   max-width: 100%;
-  max-height: calc(-50px + 100vh);
+  /*max-height: calc(-50px + 100vh);*/
+  max-height: 100vh;
   position: relative;
   width: fit-content;
   height: fit-content;

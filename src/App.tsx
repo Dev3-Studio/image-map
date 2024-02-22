@@ -21,21 +21,15 @@ interface imageCoords{
 
 function App() {
     const handleClick = () => {
-
         console.log('relative: ' + relativeMousePos.x + ', ' + relativeMousePos.y);
         let i = 0;
         for (const coords of coordsList){
             i++;
-
             if (relativeMousePos.x > coords.x && relativeMousePos.x < coords.x + coords.width && relativeMousePos.y > coords.y && relativeMousePos.y < coords.y + coords.width){
-                // console.log('clicked on image' + i);
                 setSelectedImage(`${i-1}.jpg`);
                 setDialogOpen(true);
                 return;
-                // if (dialog) dialog.show();
-                // console.log(selectedImage);
             }
-
         }
     }
     const handleZoom = (ref: ReactZoomPanPinchRef) => {
@@ -44,8 +38,6 @@ function App() {
         // setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
     }
     const handlePan = (ref: ReactZoomPanPinchRef, event: TouchEvent | MouseEvent) => {
-        console.log(ref.state.positionX)
-        console.log('y' + ref.state.positionY)
         if ("clientX" in event) {
             setRelativeMousePos({
                 x: (event.clientX - ref.state.positionX) / zoom,
@@ -63,11 +55,11 @@ function App() {
     }
 
   return (
-
     <div className={'container'}>
         <div onClick={handleClick} className={'map'}>
             <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1} doubleClick={{ disabled: true }}
                               centerOnInit={true} onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
+                              // minPositionX={-100} minPositionY={-100} maxPositionX={9000} maxPositionY={9000}
                               onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)
             }
             >
@@ -80,8 +72,6 @@ function App() {
         </div>
         {dialogOpen && <ImageOverlay filename={selectedImage} title={selectedImage!} onClick={()=>
             closeDialog()}/>}
-
-
     </div>
   )
 }
