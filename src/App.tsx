@@ -6,6 +6,8 @@ import coordsjson from './assets/coords.json';
 import ImageOverlay from "./ImageOverlay.tsx";
 const coordsList = coordsjson as imageCoords[];
 import Toolbar from "./Toolbar.tsx";
+// @ts-expect-error not used for testing
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import ImageGrid from "./ImageGrid.tsx";
 interface coords{
     x: number,
@@ -61,8 +63,7 @@ function App() {
                               centerOnInit={true} onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
                               // minPositionX={-100} minPositionY={-100} maxPositionX={9000} maxPositionY={9000}
                               onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)
-            }
-            >
+            }>
                 <TransformComponent  wrapperClass={'transformWrapper'} contentClass={'transformComponent'}>
                     {<img src={collage} alt="collage" id={'collage'}/>}
                     {/*{(zoom >= 0.5) && <ImageGrid />}*/}

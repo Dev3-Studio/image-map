@@ -3,8 +3,6 @@
   overflow: hidden;
 }
 
-
-
 .container {
   width: 100vw;
   height: 100vh;
@@ -17,7 +15,6 @@
 
 .transformWrapper {
   max-width: 100%;
-  /*max-height: calc(-50px + 100vh);*/
   max-height: 100vh;
   position: relative;
   width: fit-content;

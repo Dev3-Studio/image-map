@@ -1,5 +1,17 @@
 import './ImageOverlay.css'
+import {WalletMultiButton} from "@solana/wallet-adapter-react-ui";
+import { mplCandyMachine } from "@metaplex-foundation/mpl-candy-machine";
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
+import useFetchCandyMachine from './hooks/useFetchCandyMachine';
+import {useWallet} from "@solana/wallet-adapter-react";
+import {walletAdapterIdentity} from "@metaplex-foundation/umi-signer-wallet-adapters";
 function ImageOverlay({filename, title, onClick}: { filename: string|null, title:string, onClick: () => void }) {
+    const wallet = useWallet();
+    const umi = createUmi(process.env.NEXT_PUBLIC_SOL_DEV_ENDPOINT!, { commitment: 'confirmed' })
+        .use(walletAdapterIdentity(wallet))
+        .use(mplCandyMachine());
+    const candyMachineWithGuard = useFetchCandyMachine({ umi });
+
     return(
         <div id={'imageOverlay'}>
             <button className={'overlay-close'} onClick={onClick}>x</button>
@@ -12,7 +24,7 @@ function ImageOverlay({filename, title, onClick}: { filename: string|null, title
                 five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was
                 popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more
                 recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
-
+            <WalletMultiButton />
         </div>
     )
 }
