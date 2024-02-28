@@ -6,7 +6,7 @@ use image::codecs::avif::AvifEncoder;
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
 use image::codecs::webp::{WebPEncoder, WebPQuality};
-use image::{GenericImage, GenericImageView};
+use image::{GenericImage, GenericImageView, ImageBuffer, Rgba};
 use serde_json::Value;
 use walkdir::WalkDir;
 
@@ -86,7 +86,16 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec
         });
     }
 
+    save_image(imgbuf, imgx, imgy, "output/collage.webp");
 
+
+    //write the coords file
+    let coord_writer = std::fs::File::create("output/coords.json").unwrap();
+    serde_json::to_writer_pretty(coord_writer, &coords_vec).unwrap();
+
+}
+
+fn save_image(imgbuf: ImageBuffer<Rgba<u8>, Vec<u8>>, img_width: u32, img_height: u32, path: &str) {
     //webp format
     // let mut writer = std::fs::File::create("output/collage3.webp").unwrap();
     // // let encoder = AvifEncoder::new_with_speed_quality(&mut writer, 1, 25); //quality 25 is good compromise
@@ -95,20 +104,23 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec
 
     //create 9 subimages and render individually
     for i in 0..9 {
-        let mut subimgbuf = image::ImageBuffer::new(imgx/3, imgy/3);
-        let x = (i % 3) * (imgx/3) as i32;
-        let y = (i / 3) * (imgy/3) as i32;
-        subimgbuf = imgbuf.view(x as u32, y as u32, imgx/3, imgy/3).to_image();
+        let mut subimgbuf = image::ImageBuffer::new(img_width /3, img_height /3);
+        let x = (i % 3) * (img_width /3) as i32;
+        let y = (i / 3) * (img_height /3) as i32;
+        subimgbuf = imgbuf.view(x as u32, y as u32, img_width /3, img_height /3).to_image();
         let mut writer = std::fs::File::create(format!("output/collage-sub{}.webp", i)).unwrap();
         let encoder = WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(25));
         subimgbuf.write_with_encoder(encoder).expect("TODO: panic message");
     }
+}
 
+fn replace_image(img: image::DynamicImage, coords: ImageCoords, collage: ImageBuffer<Rgba<u8>, Vec<u8>>) {
+    let mut imgbuf = collage;
+    image::imageops::overlay(&mut imgbuf, &img, coords.x as i64, coords.y as i64);
+    let imgx = imgbuf.width();
+    let imgy = imgbuf.height();
 
-    //write the coords file
-    let coord_writer = std::fs::File::create("output/coords.json").unwrap();
-    serde_json::to_writer_pretty(coord_writer, &coords_vec).unwrap();
-
+    save_image(imgbuf, imgx, imgy, "output/collage.webp");
 }
 
 fn parse_json(path: &str) -> serde_json::Value{
