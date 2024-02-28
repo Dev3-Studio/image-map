@@ -41,7 +41,7 @@ fn crop_image(img: image::DynamicImage, nwidth: u32)->image::DynamicImage{
 }
 
 //create a collage of square images using image crate
-fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec<i32>>) {
+fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec<i32>>) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let input_path = path;
     let base_width = width;
 
@@ -86,16 +86,18 @@ fn create_collage(path: &str, width: u32, depth_arr: Vec<i32>, path_arr: Vec<Vec
         });
     }
 
-    save_image(imgbuf, imgx, imgy, "output/collage.webp");
+    // save_image(imgbuf, imgx, imgy, "output/collage.webp");
 
 
     //write the coords file
     let coord_writer = std::fs::File::create("output/coords.json").unwrap();
     serde_json::to_writer_pretty(coord_writer, &coords_vec).unwrap();
 
+    return imgbuf;
+
 }
 
-fn save_image(imgbuf: ImageBuffer<Rgba<u8>, Vec<u8>>, img_width: u32, img_height: u32, path: &str) {
+fn save_image(imgbuf: ImageBuffer<Rgba<u8>, Vec<u8>>, img_width: u32, img_height: u32, path: &str) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     //webp format
     // let mut writer = std::fs::File::create("output/collage3.webp").unwrap();
     // // let encoder = AvifEncoder::new_with_speed_quality(&mut writer, 1, 25); //quality 25 is good compromise
@@ -103,24 +105,35 @@ fn save_image(imgbuf: ImageBuffer<Rgba<u8>, Vec<u8>>, img_width: u32, img_height
     // imgbuf.write_with_encoder(encoder).expect("TODO: panic message");
 
     //create 9 subimages and render individually
-    for i in 0..9 {
-        let mut subimgbuf = image::ImageBuffer::new(img_width /3, img_height /3);
-        let x = (i % 3) * (img_width /3) as i32;
-        let y = (i / 3) * (img_height /3) as i32;
-        subimgbuf = imgbuf.view(x as u32, y as u32, img_width /3, img_height /3).to_image();
+    // for i in 0..9 {
+    //     let mut subimgbuf = image::ImageBuffer::new(img_width /3, img_height /3);
+    //     let x = (i % 3) * (img_width /3) as i32;
+    //     let y = (i / 3) * (img_height /3) as i32;
+    //     subimgbuf = imgbuf.view(x as u32, y as u32, img_width /3, img_height /3).to_image();
+    //     let mut writer = std::fs::File::create(format!("output/collage-sub{}.webp", i)).unwrap();
+    //     let encoder = WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(25));
+    //     subimgbuf.write_with_encoder(encoder).expect("TODO: panic message");
+    // }
+    return imgbuf;
+}
+
+fn save_subimages(imgbuf: ImageBuffer<Rgba<u8>, Vec<u8>>, img_width: u32, img_height: u32, path: &str, divisions: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    for i in 0..divisions {
+        let mut subimgbuf = image::ImageBuffer::new(img_width /divisions, img_height /divisions);
+        let x = (i % divisions) * (img_width /divisions) as i32;
+        let y = (i / divisions) * (img_height /divisions) as i32;
+        subimgbuf = imgbuf.view(x as u32, y as u32, img_width /divisions, img_height /divisions).to_image();
         let mut writer = std::fs::File::create(format!("output/collage-sub{}.webp", i)).unwrap();
         let encoder = WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(25));
         subimgbuf.write_with_encoder(encoder).expect("TODO: panic message");
     }
+    return imgbuf;
 }
 
-fn replace_image(img: image::DynamicImage, coords: ImageCoords, collage: ImageBuffer<Rgba<u8>, Vec<u8>>) {
+fn replace_image(img: image::DynamicImage, coords: ImageCoords, collage: ImageBuffer<Rgba<u8>, Vec<u8>>) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
     let mut imgbuf = collage;
     image::imageops::overlay(&mut imgbuf, &img, coords.x as i64, coords.y as i64);
-    let imgx = imgbuf.width();
-    let imgy = imgbuf.height();
-
-    save_image(imgbuf, imgx, imgy, "output/collage.webp");
+    return imgbuf;
 }
 
 fn parse_json(path: &str) -> serde_json::Value{
@@ -201,7 +214,9 @@ fn main() {
     let json = parse_json(json_path);
     let _x = traverse_json(json, &mut depth_arr, &mut path_arr);
 
-    create_collage(image_path, 120, depth_arr, path_arr);
+    let image = create_collage(image_path, 120, depth_arr, path_arr);
+    let im = save_image(image, image.width(), image.height(), "output/collage.webp");
+    save_subimages(im, image.width(), image.height(), "output/collage.webp", 3);
     println!("Time taken: {}s", start.elapsed().as_secs());
 
 }
