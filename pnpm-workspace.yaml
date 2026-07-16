@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+allowBuilds:
+  bufferutil@4.1.0: true
+  nx@23.1.0: true
+  utf-8-validate@6.0.6: true
+minimumReleaseAgeExclude:
+  - vite@8.1.5

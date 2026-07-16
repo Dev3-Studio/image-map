@@ -1,44 +1,41 @@
 # Place monorepo
 
-This repository combines the tiling images web app and the collage maker tool in one Nx workspace.
+This repository combines the NFT collage app and the collage maker tool in one Nx workspace.
 
 ## Projects
 
-- `apps/tiling-images` - Next.js image tiling demo
 - `apps/place-nft` - Vite NFT collage app
 - `tools/collage-maker` - Rust collage generator
 
 ## Prerequisites
 
-- Node.js 24.5 (see `.nvmrc`) and npm
+- Node.js 24.5 (see `.nvmrc`) and pnpm 11.10
 - Rust and Cargo
 
 Install JavaScript dependencies from the repository root:
 
 ```powershell
-npm install
+pnpm install
 ```
 
 ## Common commands
 
 ```powershell
-npm run dev
-npm run dev:tiling-images
-npm run dev:place-nft
-npm run build
-npm run lint
-npm run test
-npm run typecheck
+pnpm dev
+pnpm dev:place-nft
+pnpm build
+pnpm lint
+pnpm test
+pnpm typecheck
 ```
 
 Run a single target directly with Nx:
 
 ```powershell
-npm exec nx -- show projects
-npm exec nx -- build tiling-images
-npm exec nx -- build place-nft
-npm exec nx -- build collage-maker
-npm exec nx -- run collage-maker:run
+pnpm nx -- show projects
+pnpm nx -- build place-nft
+pnpm nx -- build collage-maker
+pnpm nx -- run collage-maker:run
 ```
 
 The Rust executable still expects its runtime `input` and `output` directories under `tools/collage-maker`; these directories remain ignored by Git.
@@ -47,5 +44,5 @@ WebP tiles are encoded sequentially by default to keep peak memory bounded. On m
 
 ```powershell
 $env:COLLAGE_ENCODER_JOBS=3
-npm exec nx -- run collage-maker:run
+pnpm nx -- run collage-maker:run
 ```

@@ -5,14 +5,10 @@
   "engines": {
     "node": ">=24.5.0 <25"
   },
-  "packageManager": "npm@11.14.1",
-  "workspaces": [
-    "apps/*"
-  ],
+  "packageManager": "pnpm@11.10.0",
   "scripts": {
     "nx": "nx",
-    "dev": "nx run-many -t dev --projects=tiling-images,place-nft --parallel=2",
-    "dev:tiling-images": "nx dev tiling-images",
+    "dev": "nx dev place-nft",
     "dev:place-nft": "nx dev place-nft",
     "build": "nx run-many -t build",
     "lint": "nx run-many -t lint",
@@ -20,7 +16,6 @@
     "typecheck": "nx run-many -t typecheck"
   },
   "devDependencies": {
-    "@nx/next": "^23.1.0",
     "@nx/vite": "^23.1.0",
     "nx": "^23.1.0"
   }

@@ -3,18 +3,6 @@
   "defaultBase": "main",
   "plugins": [
     {
-      "plugin": "@nx/next/plugin",
-      "include": [
-        "apps/tiling-images/**/*"
-      ],
-      "options": {
-        "buildTargetName": "build",
-        "devTargetName": "dev",
-        "startTargetName": "start",
-        "serveStaticTargetName": "serve-static"
-      }
-    },
-    {
       "plugin": "@nx/vite/plugin",
       "include": [
         "apps/place-nft/**/*"
@@ -40,7 +28,7 @@
       "!{projectRoot}/target/**/*"
     ],
     "sharedGlobals": [
-      "{workspaceRoot}/package-lock.json"
+      "{workspaceRoot}/pnpm-lock.yaml"
     ]
   },
   "targetDefaults": {
