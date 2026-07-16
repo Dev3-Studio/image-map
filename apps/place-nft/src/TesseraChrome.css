@@ -67,6 +67,7 @@
   width: 230px;
   height: 41px;
   padding: 0 18px;
+  box-sizing: content-box;
   overflow: hidden;
   border-radius: 999px;
   transform: translateX(-50%);
@@ -129,10 +130,15 @@
   width: 148px;
   height: 148px;
   padding: 0;
+  box-sizing: content-box;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.92);
   border-radius: 18px;
   background: url('/collage.webp') center / 100% 100% no-repeat;
+  background-image: image-set(
+    url('/collage.avif') type("image/avif"),
+    url('/collage.webp') type("image/webp")
+  );
   box-shadow: 0 16px 48px rgba(20, 32, 55, 0.3);
   transition: transform 300ms var(--spring);
 }
@@ -158,6 +164,7 @@
   left: 0;
   width: 22px;
   height: 16px;
+  box-sizing: content-box;
   border: 2px solid #fff;
   border-radius: 3px;
   box-shadow: 0 2px 8px rgba(20, 32, 55, 0.56);
@@ -226,6 +233,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 18px;
+  box-sizing: content-box;
   border-radius: 24px;
   transform: translate(-50%, -50%);
   box-shadow: 0 24px 70px rgba(5, 12, 28, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.92);
@@ -277,6 +285,7 @@
 .upload-dropzone {
   display: flex;
   height: 170px;
+  box-sizing: content-box;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -395,33 +404,37 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 639px) {
   .brand-capsule {
-    top: 10px;
-    left: 10px;
-    padding: 9px 13px 9px 11px;
-    font-size: 14px;
+    top: 16px;
+    left: 12px;
+    padding: 14px;
+  }
+
+  .brand-wordmark {
+    display: none;
   }
 
   .search-capsule {
-    top: 58px;
-    width: calc(100vw - 52px);
-    max-width: 340px;
+    top: 16px;
+    right: 12px;
+    left: auto;
+    width: 175px;
+    transform: none;
   }
 
   .search-capsule:focus-within {
-    width: calc(100vw - 28px);
+    width: min(340px, calc(100vw - 155px));
   }
 
   .minimap {
-    right: 10px;
+    right: 12px;
     bottom: 86px;
-    width: 104px;
-    height: 104px;
-    border-radius: 14px;
+    width: 84px;
+    height: 84px;
   }
 
   .upload-dialog {
-    width: calc(100vw - 52px);
+    width: min(330px, calc(100vw - 40px));
   }
 }

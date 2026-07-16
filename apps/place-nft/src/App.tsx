@@ -1,4 +1,3 @@
-import collage from '/collage.webp'
 import './App.css'
 import {useRef, useState, type MouseEvent as ReactMouseEvent} from 'react'
 import {
@@ -120,7 +119,8 @@ function App() {
                         }
 
                         if (minimapViewportRef.current) {
-                            const minimapSize = window.innerWidth <= 720 ? 104 : 148
+                            const minimapSize = minimapViewportRef.current.parentElement?.clientWidth
+                                ?? (window.innerWidth < 640 ? 84 : 148)
                             const left = Math.max(0, Math.min(minimapSize - 8, (-positionX / scale / MAP_SIZE) * minimapSize))
                             const top = Math.max(0, Math.min(minimapSize - 8, (-positionY / scale / MAP_SIZE) * minimapSize))
                             const width = Math.max(8, Math.min(minimapSize, (window.innerWidth / scale / MAP_SIZE) * minimapSize))
@@ -132,25 +132,29 @@ function App() {
                     }}
                 >
                     <TransformComponent wrapperClass="transformWrapper" contentClass="transformComponent">
-                        <img
-                            src={collage}
-                            alt="Tessera collage map"
-                            id="collage"
-                            draggable={false}
-                            onLoad={() => {
-                                if (preloadedHighResolutionImages.length > 0) {
-                                    return
-                                }
+                        <picture className="collage-picture">
+                            <source srcSet="/collage.avif" type="image/avif"/>
+                            <img
+                                src="/collage.webp"
+                                alt="Tessera collage map"
+                                id="collage"
+                                fetchPriority="high"
+                                draggable={false}
+                                onLoad={() => {
+                                    if (preloadedHighResolutionImages.length > 0) {
+                                        return
+                                    }
 
-                                HIGH_RESOLUTION_PRELOAD_ORDER.forEach((index) => {
-                                    const image = new Image()
-                                    image.decoding = 'async'
-                                    image.fetchPriority = 'low'
-                                    image.src = HIGH_RESOLUTION_TILE_URLS[index]
-                                    preloadedHighResolutionImages.push(image)
-                                })
-                            }}
-                        />
+                                    HIGH_RESOLUTION_PRELOAD_ORDER.forEach((index) => {
+                                        const image = new Image()
+                                        image.decoding = 'async'
+                                        image.fetchPriority = 'low'
+                                        image.src = HIGH_RESOLUTION_TILE_URLS[index]
+                                        preloadedHighResolutionImages.push(image)
+                                    })
+                                }}
+                            />
+                        </picture>
                         <ImageGrid visible={showHighResolution}/>
                         {uploads.map((upload) => (
                             <img

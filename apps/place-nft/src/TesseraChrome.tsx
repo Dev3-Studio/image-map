@@ -13,7 +13,7 @@ export function TesseraHeader({onSearch}: {onSearch: (index: number) => void}) {
         <header className="tessera-header">
             <div className="glass-surface brand-capsule">
                 <span className="brand-mark" aria-hidden="true"/>
-                <span>Tessera</span>
+                <span className="brand-wordmark">Tessera</span>
             </div>
             <form
                 className="glass-surface glow-surface search-capsule"

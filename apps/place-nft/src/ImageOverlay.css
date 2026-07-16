@@ -5,12 +5,14 @@
   bottom: 16px;
   z-index: 25;
   display: flex;
-  width: 362px;
+  width: 330px;
   flex-direction: column;
   gap: 14px;
   padding: 16px;
+  box-sizing: content-box;
+  overflow-y: auto;
   border-radius: 26px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.6);
   box-shadow: 0 12px 40px rgba(25, 35, 60, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.92);
   animation: panel-in 420ms var(--ease-out) both;
 }
@@ -85,6 +87,10 @@
   width: 100%;
 }
 
+#imageOverlay .wallet-adapter-dropdown-list:not(.wallet-adapter-dropdown-list-active) {
+  display: none;
+}
+
 #imageOverlay .overlay-wallet-action .wallet-adapter-button {
   width: 100%;
   height: 44px;
@@ -132,19 +138,14 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 639px) {
   #imageOverlay {
     top: auto;
-    right: 10px;
-    bottom: 10px;
-    left: 10px;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
     width: auto;
-    max-height: min(72vh, 620px);
-    border-radius: 24px;
-  }
-
-  .overlay-image {
-    width: min(100%, 260px);
-    align-self: center;
+    max-height: calc(100vh - 100px);
+    max-height: calc(100dvh - 100px);
   }
 }

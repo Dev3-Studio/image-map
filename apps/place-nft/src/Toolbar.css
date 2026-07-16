@@ -77,19 +77,3 @@
   margin: 0 4px;
   background: rgba(28, 39, 51, 0.15);
 }
-
-@media (max-width: 720px) {
-  #toolbar {
-    bottom: 14px;
-    max-width: calc(100vw - 20px);
-  }
-
-  #toolbar button {
-    width: 37px;
-    height: 37px;
-  }
-
-  .zoom-label {
-    min-width: 44px;
-  }
-}

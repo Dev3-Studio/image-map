@@ -33,6 +33,12 @@
   user-select: none;
 }
 
+.collage-picture {
+  display: block;
+  width: 7680px;
+  height: 7680px;
+}
+
 .map .transformWrapper {
   position: relative;
   width: 100%;
