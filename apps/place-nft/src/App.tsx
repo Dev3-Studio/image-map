@@ -7,8 +7,11 @@ import ImageOverlay from "./ImageOverlay.tsx";
 const coordsList = coordsjson as imageCoords[];
 import Toolbar from "./Toolbar.tsx";
 import ImageGrid from "./ImageGrid.tsx";
+import {HIGH_RESOLUTION_TILE_URLS} from "./imageTiles.ts";
 
 const HIGH_RESOLUTION_ZOOM = 1.1;
+const HIGH_RESOLUTION_PRELOAD_ORDER = [4, 1, 3, 5, 7, 0, 2, 6, 8];
+const preloadedHighResolutionImages: HTMLImageElement[] = [];
 
 interface coords{
     x: number,
@@ -66,7 +69,25 @@ function App() {
                 onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
             >
                 <TransformComponent  wrapperClass={'transformWrapper'} contentClass={'transformComponent'}>
-                    <img src={collage} alt="Collage map" id={'collage'} draggable={false}/>
+                    <img
+                        src={collage}
+                        alt="Collage map"
+                        id={'collage'}
+                        draggable={false}
+                        onLoad={() => {
+                            if (preloadedHighResolutionImages.length > 0) {
+                                return;
+                            }
+
+                            HIGH_RESOLUTION_PRELOAD_ORDER.forEach((index) => {
+                                const image = new Image();
+                                image.decoding = 'async';
+                                image.fetchPriority = 'low';
+                                image.src = HIGH_RESOLUTION_TILE_URLS[index];
+                                preloadedHighResolutionImages.push(image);
+                            });
+                        }}
+                    />
                     <ImageGrid visible={showHighResolution}/>
                 </TransformComponent>
                 <Toolbar/>

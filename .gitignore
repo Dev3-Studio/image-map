@@ -16,3 +16,4 @@ tools/*/target/
 .env.local
 *.tsbuildinfo
 npm-debug.log*
+/Liquid glass image showcase/
