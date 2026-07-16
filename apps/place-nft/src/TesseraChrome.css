@@ -196,10 +196,6 @@
   border: 1px solid rgba(255, 255, 255, 0.92);
   border-radius: 18px;
   background: url('/collage.webp') center / 100% 100% no-repeat;
-  background-image: image-set(
-    url('/collage.avif') type("image/avif"),
-    url('/collage.webp') type("image/webp")
-  );
   box-shadow: 0 16px 48px rgba(20, 32, 55, 0.3);
   transition: transform 300ms var(--spring);
 }

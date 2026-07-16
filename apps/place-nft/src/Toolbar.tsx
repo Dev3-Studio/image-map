@@ -15,6 +15,7 @@ function Toolbar({
         <div
             id="toolbar"
             className="glass-surface glow-surface"
+            onClick={(event) => event.stopPropagation()}
             onPointerMove={(event) => {
                 const bounds = event.currentTarget.getBoundingClientRect()
                 event.currentTarget.style.setProperty('--glow-x', `${event.clientX - bounds.left}px`)

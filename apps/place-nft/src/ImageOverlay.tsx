@@ -8,7 +8,17 @@ import {clusterApiUrl} from '@solana/web3.js'
 import useFetchCandyMachine from './hooks/useFetchCandyMachine'
 import './ImageOverlay.css'
 
-function ImageOverlay({filename, title, onClick}: {filename: string; title: string; onClick: () => void}) {
+function ImageOverlay({
+    imageUrl,
+    title,
+    tileCount,
+    onClick,
+}: {
+    imageUrl: string
+    title: string
+    tileCount: number
+    onClick: () => void
+}) {
     const wallet = useWallet()
     const umi = useMemo(
         () => createUmi(import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet'), {commitment: 'confirmed'})
@@ -26,14 +36,14 @@ function ImageOverlay({filename, title, onClick}: {filename: string; title: stri
                     <line x1="9.5" y1="1.5" x2="1.5" y2="9.5"/>
                 </svg>
             </button>
-            <img className="overlay-image" src={`/fullres/${filename}`} alt={`Artwork for ${title}`}/>
+            <img className="overlay-image" src={imageUrl} alt={`Artwork for ${title}`}/>
             <div className="overlay-copy">
                 <h1>{title}</h1>
                 <div className="overlay-owner">
                     <span>Owner</span>
                     <code>0x123…9fe</code>
                 </div>
-                <p>Minted to the Tessera collage · Jan 12, 2026. One of 10,000 tiles.</p>
+                <p>Minted to the Tessera collage · Jan 12, 2026. One of {tileCount.toLocaleString()} tiles.</p>
             </div>
             <div className="overlay-wallet-action">
                 <BaseWalletMultiButton

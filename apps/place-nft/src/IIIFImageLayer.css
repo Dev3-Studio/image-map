@@ -1,0 +1,24 @@
+#iiifImageLayer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.iiif-image-tile {
+    position: absolute;
+    display: block;
+    max-width: none;
+    user-select: none;
+    animation: reveal-iiif-tile 160ms ease-out both;
+}
+
+@keyframes reveal-iiif-tile {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

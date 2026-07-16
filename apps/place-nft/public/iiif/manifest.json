@@ -1,0 +1,467 @@
+{
+  "@context": "http://iiif.io/api/presentation/3/context.json",
+  "id": "/iiif/manifest.json",
+  "type": "Manifest",
+  "label": {
+    "en": [
+      "Tessera deep-zoom showcase"
+    ]
+  },
+  "items": [
+    {
+      "id": "/iiif/canvas",
+      "type": "Canvas",
+      "width": 768,
+      "height": 768,
+      "items": [
+        {
+          "id": "/iiif/page",
+          "type": "AnnotationPage",
+          "items": [
+            {
+              "id": "/iiif/annotation/0",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=0,0,256,256",
+              "body": {
+                "id": "/iiif/3/0/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/0",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/1",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=256,0,256,256",
+              "body": {
+                "id": "/iiif/3/1/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/1",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/2",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=512,0,256,256",
+              "body": {
+                "id": "/iiif/3/2/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/2",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/3",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=0,256,256,256",
+              "body": {
+                "id": "/iiif/3/3/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/3",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/4",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=256,256,256,256",
+              "body": {
+                "id": "/iiif/3/4/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/4",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/5",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=512,256,256,256",
+              "body": {
+                "id": "/iiif/3/5/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/5",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/6",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=0,512,256,256",
+              "body": {
+                "id": "/iiif/3/6/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/6",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/7",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=256,512,256,256",
+              "body": {
+                "id": "/iiif/3/7/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/7",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "/iiif/annotation/8",
+              "type": "Annotation",
+              "motivation": "painting",
+              "target": "/iiif/canvas#xywh=512,512,256,256",
+              "body": {
+                "id": "/iiif/3/8/full/1024,1024/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 1024,
+                "height": 1024,
+                "service": [
+                  {
+                    "id": "/iiif/3/8",
+                    "type": "ImageService3",
+                    "protocol": "http://iiif.io/api/image",
+                    "profile": "level0",
+                    "width": 2048,
+                    "height": 2048,
+                    "tiles": [
+                      {
+                        "width": 1024,
+                        "scaleFactors": [
+                          1,
+                          2
+                        ]
+                      }
+                    ],
+                    "sizes": [
+                      {
+                        "width": 256,
+                        "height": 256
+                      },
+                      {
+                        "width": 512,
+                        "height": 512
+                      },
+                      {
+                        "width": 1024,
+                        "height": 1024
+                      }
+                    ],
+                    "preferredFormats": [
+                      "jpg"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

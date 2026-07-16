@@ -6,9 +6,9 @@ import {
     type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
 import coordsjson from './assets/coords.json'
-import FullResolutionImageLayer from './FullResolutionImageLayer.tsx'
 import ImageOverlay from './ImageOverlay.tsx'
-import ImageGrid from './ImageGrid.tsx'
+import IIIFImageLayer from './IIIFImageLayer.tsx'
+import {loadIIIFManifest, type IIIFMapDefinition} from './iiifManifest.ts'
 import Toolbar from './Toolbar.tsx'
 import {
     Minimap,
@@ -16,18 +16,15 @@ import {
     TesseraHeader,
     UploadDialog,
 } from './TesseraChrome.tsx'
-import {HIGH_RESOLUTION_TILE_URLS} from './imageTiles.ts'
 
-const MAP_SIZE = 7680
+const FALLBACK_MAP_SIZE = 768
+const INITIAL_SCALE = 1.7
 const MIN_SCALE = 0.08
 const MAX_SCALE = 8
 const HIGH_RESOLUTION_ZOOM = 1.1
-const FULL_RESOLUTION_ZOOM = 1.5
 const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
-const HIGH_RESOLUTION_PRELOAD_ORDER = [4, 1, 3, 5, 7, 0, 2, 6, 8]
-const preloadedHighResolutionImages: HTMLImageElement[] = []
 
-type DetailLevel = 'preview' | 'tiles' | 'originals'
+type DetailLevel = 'preview' | 'iiif'
 
 interface Point {
     x: number
@@ -56,9 +53,9 @@ interface LocationViewportState {
     scale: number
 }
 
-const coordsList = coordsjson as ImageCoords[]
+const fallbackCoordsList = coordsjson as ImageCoords[]
 
-function getLocationState() {
+function getLocationState(coordsList: ImageCoords[]) {
     const tileMatch = window.location.pathname.match(/^\/tile\/(\d+)\/?$/)
     const rawTileIndex = tileMatch ? Number.parseInt(tileMatch[1], 10) : null
     const params = new URLSearchParams(window.location.search)
@@ -100,7 +97,13 @@ function updateLocation(
     window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', nextUrl)
 }
 
-function App() {
+function TesseraMap({
+    mapDefinition,
+    manifestReady,
+}: {
+    mapDefinition: IIIFMapDefinition
+    manifestReady: boolean
+}) {
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
     const pointerDownRef = useRef<Point | null>(null)
     const zoomLabelRef = useRef<HTMLSpanElement | null>(null)
@@ -119,6 +122,7 @@ function App() {
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [uploads, setUploads] = useState<UploadedTile[]>([])
+    const coordsList = mapDefinition.placements
 
     const positionSelectionMarker = useCallback((viewport: ViewportState) => {
         const marker = selectionMarkerRef.current
@@ -133,7 +137,7 @@ function App() {
         marker.style.width = `${coords.width * viewport.scale}px`
         marker.style.height = `${coords.width * viewport.scale}px`
         marker.classList.toggle('tile-selection-marker--label-below', top < 56)
-    }, [activeTileIndex])
+    }, [activeTileIndex, coordsList])
 
     const focusTile = useCallback((
         index: number,
@@ -183,10 +187,10 @@ function App() {
             locationViewport ? 0 : 420,
             'easeOut',
         )
-    }, [])
+    }, [coordsList])
 
     const restoreLocation = useCallback((transformOverride?: ReactZoomPanPinchRef) => {
-        const {tileIndex, viewport, error} = getLocationState()
+        const {tileIndex, viewport, error} = getLocationState(coordsList)
         setSearchError(error)
         setSelectedImageIndex(null)
 
@@ -208,9 +212,9 @@ function App() {
                 'easeOut',
             )
         } else if (transform) {
-            transform.centerView(1, 0, 'easeOut')
+            transform.centerView(INITIAL_SCALE, 0, 'easeOut')
         }
-    }, [focusTile])
+    }, [coordsList, focusTile])
 
     useEffect(() => {
         const handlePopState = () => restoreLocation()
@@ -291,7 +295,7 @@ function App() {
                     limitToBounds={false}
                     minScale={MIN_SCALE}
                     maxScale={MAX_SCALE}
-                    initialScale={1}
+                    initialScale={INITIAL_SCALE}
                     smooth={false}
                     doubleClick={{disabled: true}}
                     wheel={{step: 0.15}}
@@ -299,11 +303,9 @@ function App() {
                     onTransform={(ref) => {
                         const {positionX, positionY, scale} = ref.state
                         positionSelectionMarker(ref.state)
-                        const nextDetailLevel = scale >= FULL_RESOLUTION_ZOOM
-                            ? 'originals'
-                            : scale >= HIGH_RESOLUTION_ZOOM
-                                ? 'tiles'
-                                : 'preview'
+                        const nextDetailLevel = scale >= HIGH_RESOLUTION_ZOOM
+                            ? 'iiif'
+                            : 'preview'
 
                         setDetailLevel((currentDetailLevel) =>
                             currentDetailLevel === nextDetailLevel
@@ -317,10 +319,10 @@ function App() {
                         if (minimapViewportRef.current) {
                             const minimapSize = minimapViewportRef.current.parentElement?.clientWidth
                                 ?? (window.innerWidth < 640 ? 84 : 148)
-                            const left = Math.max(0, Math.min(minimapSize - 8, (-positionX / scale / MAP_SIZE) * minimapSize))
-                            const top = Math.max(0, Math.min(minimapSize - 8, (-positionY / scale / MAP_SIZE) * minimapSize))
-                            const width = Math.max(8, Math.min(minimapSize, (window.innerWidth / scale / MAP_SIZE) * minimapSize))
-                            const height = Math.max(8, Math.min(minimapSize, (window.innerHeight / scale / MAP_SIZE) * minimapSize))
+                            const left = Math.max(0, Math.min(minimapSize - 8, (-positionX / scale / mapDefinition.width) * minimapSize))
+                            const top = Math.max(0, Math.min(minimapSize - 8, (-positionY / scale / mapDefinition.height) * minimapSize))
+                            const width = Math.max(8, Math.min(minimapSize, (window.innerWidth / scale / mapDefinition.width) * minimapSize))
+                            const height = Math.max(8, Math.min(minimapSize, (window.innerHeight / scale / mapDefinition.height) * minimapSize))
                             minimapViewportRef.current.style.transform = `translate3d(${left}px, ${top}px, 0)`
                             minimapViewportRef.current.style.width = `${width}px`
                             minimapViewportRef.current.style.height = `${height}px`
@@ -343,31 +345,24 @@ function App() {
                     }}
                 >
                     <TransformComponent wrapperClass="transformWrapper" contentClass="transformComponent">
-                        <picture className="collage-picture">
-                            <source srcSet="/collage.avif" type="image/avif"/>
+                        <picture
+                            className="collage-picture"
+                            style={{width: mapDefinition.width, height: mapDefinition.height}}
+                        >
                             <img
                                 src="/collage.webp"
                                 alt="Tessera collage map"
                                 id="collage"
                                 fetchPriority="high"
                                 draggable={false}
-                                onLoad={() => {
-                                    if (preloadedHighResolutionImages.length > 0) {
-                                        return
-                                    }
-
-                                    HIGH_RESOLUTION_PRELOAD_ORDER.forEach((index) => {
-                                        const image = new Image()
-                                        image.decoding = 'async'
-                                        image.fetchPriority = 'low'
-                                        image.src = HIGH_RESOLUTION_TILE_URLS[index]
-                                        preloadedHighResolutionImages.push(image)
-                                    })
-                                }}
+                                style={{width: mapDefinition.width, height: mapDefinition.height}}
                             />
                         </picture>
-                        <ImageGrid visible={detailLevel !== 'preview'}/>
-                        {detailLevel === 'originals' ? <FullResolutionImageLayer/> : null}
+                        <IIIFImageLayer
+                            visible={detailLevel === 'iiif'}
+                            placements={mapDefinition.placements}
+                            manifestReady={manifestReady}
+                        />
                         {uploads.map((upload) => (
                             <img
                                 key={upload.id}
@@ -439,8 +434,8 @@ function App() {
                         }
 
                         const bounds = event.currentTarget.getBoundingClientRect()
-                        const x = ((event.clientX - bounds.left) / bounds.width) * MAP_SIZE
-                        const y = ((event.clientY - bounds.top) / bounds.height) * MAP_SIZE
+                        const x = ((event.clientX - bounds.left) / bounds.width) * mapDefinition.width
+                        const y = ((event.clientY - bounds.top) / bounds.height) * mapDefinition.height
                         const scale = transform.state.scale
                         transform.setTransform(
                             window.innerWidth / 2 - x * scale,
@@ -459,8 +454,9 @@ function App() {
 
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
                 <ImageOverlay
-                    filename={`${selectedImageIndex % 6}.jpg`}
+                    imageUrl={coordsList[selectedImageIndex].thumbnail ?? '/collage.webp'}
                     title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
+                    tileCount={coordsList.length}
                     onClick={() => setSelectedImageIndex(null)}
                 />
             ) : null}
@@ -499,6 +495,59 @@ function App() {
                 />
             ) : null}
         </main>
+    )
+}
+
+function App() {
+    const [mapState, setMapState] = useState<{
+        definition: IIIFMapDefinition
+        manifestReady: boolean
+    } | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+
+        loadIIIFManifest()
+            .then((definition) => {
+                if (!cancelled) {
+                    setMapState({definition, manifestReady: true})
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setMapState({
+                        definition: {
+                            width: FALLBACK_MAP_SIZE,
+                            height: FALLBACK_MAP_SIZE,
+                            placements: fallbackCoordsList.map((coords, index) => ({
+                                ...coords,
+                                height: coords.width,
+                                id: `fallback-${index}`,
+                            })),
+                        },
+                        manifestReady: false,
+                    })
+                }
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
+    if (!mapState) {
+        return (
+            <main className="tessera-app map-loading" aria-busy="true">
+                <img src="/collage.webp" alt="Preparing the Tessera collage map"/>
+            </main>
+        )
+    }
+
+    return (
+        <TesseraMap
+            mapDefinition={mapState.definition}
+            manifestReady={mapState.manifestReady}
+        />
     )
 }
 

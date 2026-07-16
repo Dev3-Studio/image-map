@@ -38,7 +38,33 @@ pnpm nx -- build collage-maker
 pnpm nx -- run collage-maker:run
 ```
 
-The Rust executable still expects its runtime `input` and `output` directories under `tools/collage-maker`; these directories remain ignored by Git.
+The Rust executable expects its runtime `input` and `output` directories under `tools/collage-maker`; these directories remain ignored by Git. A normal run now publishes an IIIF Presentation 3 manifest and static Image API 3 Level 0 services to `output/iiif` alongside the legacy collage output.
+
+Set `IIIF_PUBLIC_BASE_URL` to the final public HTTP(S) URL before publishing production images so every IIIF resource has a dereferenceable standards-compliant identifier:
+
+```powershell
+$env:IIIF_PUBLIC_BASE_URL="https://images.example.com/iiif"
+pnpm nx -- run collage-maker:run
+```
+
+Each source image is center-cropped to the square used in the collage, then published as:
+
+```text
+iiif/
+├── manifest.json
+└── 3/{image-id}/
+    ├── info.json
+    ├── full/{size},{size}/0/default.jpg
+    └── {x},{y},{w},{h}/{width},{height}/0/default.jpg
+```
+
+The committed showcase uses portable root-relative identifiers and can be regenerated from the nine source images in `tools/collage-maker/showcase`:
+
+```powershell
+pnpm nx -- run collage-maker:publish-showcase
+```
+
+`publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, and `--jpeg-quality` to configure it. `--preview-output` and `--coords-output` keep the low-resolution map preview and navigation coordinates synchronized with the manifest.
 
 WebP tiles are encoded sequentially by default to keep peak memory bounded. On machines with additional memory, set `COLLAGE_ENCODER_JOBS` up to the number of output tiles to encode tiles concurrently:
 
