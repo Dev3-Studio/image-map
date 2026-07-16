@@ -3,7 +3,6 @@ use libwebp_sys::WebPConfig;
 use rayon::prelude::*;
 use serde::Serialize;
 use serde_json::{Map, Value};
-use std::cmp::max;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -15,16 +14,6 @@ struct ImageCoords {
     x: u32,
     y: u32,
     width: u32,
-}
-
-fn crop_image(img: image::DynamicImage, nwidth: u32) -> image::DynamicImage {
-    let width = max(img.width(), img.height());
-    let mut nimg = img.crop_imm(0, 0, width, width);
-    if width != nwidth {
-        nimg = img.resize_to_fill(nwidth, nwidth, image::imageops::FilterType::Nearest);
-    }
-
-    nimg
 }
 
 fn image_paths(path: &Path) -> Vec<PathBuf> {
@@ -78,7 +67,12 @@ fn create_collage(
             .par_iter()
             .enumerate()
             .map(|(index, path)| {
-                crop_image(image::open(path).unwrap(), coords_vec[offset + index].width)
+                let target_width = coords_vec[offset + index].width;
+                image::open(path).unwrap().resize_to_fill(
+                    target_width,
+                    target_width,
+                    image::imageops::FilterType::Lanczos3,
+                )
             })
             .collect();
 
@@ -117,7 +111,7 @@ fn save_subimages(
             let mut config = WebPConfig::new().unwrap();
             config.lossless = 0;
             config.alpha_compression = 1;
-            config.quality = 25.0;
+            config.quality = 80.0;
             config.thread_level = 1;
             let encoded =
                 WebPEncoder::from_rgba(subimgbuf.as_raw(), subimgbuf.width(), subimgbuf.height())

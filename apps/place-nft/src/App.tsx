@@ -6,6 +6,7 @@ import {
     type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
 import coordsjson from './assets/coords.json'
+import FullResolutionImageLayer from './FullResolutionImageLayer.tsx'
 import ImageOverlay from './ImageOverlay.tsx'
 import ImageGrid from './ImageGrid.tsx'
 import Toolbar from './Toolbar.tsx'
@@ -19,8 +20,11 @@ import {HIGH_RESOLUTION_TILE_URLS} from './imageTiles.ts'
 
 const MAP_SIZE = 7680
 const HIGH_RESOLUTION_ZOOM = 1.1
+const FULL_RESOLUTION_ZOOM = 1.5
 const HIGH_RESOLUTION_PRELOAD_ORDER = [4, 1, 3, 5, 7, 0, 2, 6, 8]
 const preloadedHighResolutionImages: HTMLImageElement[] = []
+
+type DetailLevel = 'preview' | 'tiles' | 'originals'
 
 interface Point {
     x: number
@@ -45,7 +49,7 @@ function App() {
     const zoomLabelRef = useRef<HTMLSpanElement | null>(null)
     const minimapViewportRef = useRef<HTMLDivElement | null>(null)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
-    const [showHighResolution, setShowHighResolution] = useState(false)
+    const [detailLevel, setDetailLevel] = useState<DetailLevel>('preview')
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
@@ -110,10 +114,16 @@ function App() {
                     wheel={{step: 0.15}}
                     onTransform={(ref) => {
                         const {positionX, positionY, scale} = ref.state
-                        setShowHighResolution((visible) => {
-                            const shouldShow = scale >= HIGH_RESOLUTION_ZOOM
-                            return visible === shouldShow ? visible : shouldShow
-                        })
+                        const nextDetailLevel = scale >= FULL_RESOLUTION_ZOOM
+                            ? 'originals'
+                            : scale >= HIGH_RESOLUTION_ZOOM
+                                ? 'tiles'
+                                : 'preview'
+
+                        setDetailLevel((currentDetailLevel) =>
+                            currentDetailLevel === nextDetailLevel
+                                ? currentDetailLevel
+                                : nextDetailLevel)
 
                         if (zoomLabelRef.current) {
                             zoomLabelRef.current.textContent = `${Math.round(scale * 100)}%`
@@ -156,7 +166,8 @@ function App() {
                                 }}
                             />
                         </picture>
-                        <ImageGrid visible={showHighResolution}/>
+                        <ImageGrid visible={detailLevel !== 'preview'}/>
+                        {detailLevel === 'originals' ? <FullResolutionImageLayer/> : null}
                         {uploads.map((upload) => (
                             <img
                                 key={upload.id}

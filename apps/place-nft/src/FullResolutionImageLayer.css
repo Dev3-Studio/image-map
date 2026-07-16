@@ -1,0 +1,23 @@
+#fullResolutionImageLayer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.fullResolutionImage {
+    position: absolute;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    animation: reveal-full-resolution 180ms ease-out both;
+}
+
+@keyframes reveal-full-resolution {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
