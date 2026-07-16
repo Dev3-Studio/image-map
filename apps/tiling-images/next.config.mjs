@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	images: {
-		domains: ['cdn.pixabay.com', 'picsum.photos'],
+		remotePatterns: [
+			new URL('https://cdn.pixabay.com/**'),
+			new URL('https://picsum.photos/**'),
+		],
 	}
 };
 

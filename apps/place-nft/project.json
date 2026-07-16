@@ -1,0 +1,23 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "place-nft",
+  "projectType": "application",
+  "sourceRoot": "apps/place-nft/src",
+  "tags": [
+    "type:app",
+    "scope:web3"
+  ],
+  "targets": {
+    "build": {
+      "dependsOn": [
+        "typecheck"
+      ]
+    },
+    "lint": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "lint"
+      }
+    }
+  }
+}

@@ -5,12 +5,17 @@ import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import useFetchCandyMachine from './hooks/useFetchCandyMachine';
 import {useWallet} from "@solana/wallet-adapter-react";
 import {walletAdapterIdentity} from "@metaplex-foundation/umi-signer-wallet-adapters";
+import { clusterApiUrl } from '@solana/web3.js';
+import { useMemo } from 'react';
 function ImageOverlay({filename, title, onClick}: { filename: string|null, title:string, onClick: () => void }) {
     const wallet = useWallet();
-    const umi = createUmi(process.env.NEXT_PUBLIC_SOL_DEV_ENDPOINT!, { commitment: 'confirmed' })
-        .use(walletAdapterIdentity(wallet))
-        .use(mplCandyMachine());
-    const candyMachineWithGuard = useFetchCandyMachine({ umi });
+    const umi = useMemo(
+        () => createUmi(import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet'), { commitment: 'confirmed' })
+            .use(walletAdapterIdentity(wallet))
+            .use(mplCandyMachine()),
+        [wallet],
+    );
+    useFetchCandyMachine({ umi });
 
     return(
         <div id={'imageOverlay'}>

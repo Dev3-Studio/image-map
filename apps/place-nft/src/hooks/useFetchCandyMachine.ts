@@ -12,11 +12,16 @@ export default function useFetchCandyMachine({ umi }: { umi: Umi; }) {
 	const [candyMachineWithGuard, setCandyMachineWithGuard] = useState<CandyMachineWithGuard | null>(null);
 
 	useEffect(() => {
+		let active = true;
+
 		getCandyMachine(umi).then((cmwg) => {
-			setCandyMachineWithGuard(cmwg);
+			if (active) setCandyMachineWithGuard(cmwg);
 		});
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+
+		return () => {
+			active = false;
+		};
+	}, [umi]);
 
 	return candyMachineWithGuard;
 }

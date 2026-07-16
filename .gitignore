@@ -1,0 +1,17 @@
+node_modules/
+.nx/
+.idea/
+
+# Next.js
+apps/*/.next/
+apps/*/out/
+apps/*/dist/
+
+# Rust
+tools/*/target/
+
+# Local environment and tool output
+.env
+.env.local
+*.tsbuildinfo
+npm-debug.log*

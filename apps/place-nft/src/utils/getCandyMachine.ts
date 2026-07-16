@@ -2,7 +2,10 @@ import { safeFetchCandyGuard, safeFetchCandyMachine } from "@metaplex-foundation
 import { Umi, publicKey } from "@metaplex-foundation/umi";
 
 export default async function getCandyMachine(umi: Umi) {
-    const candyMachine = await safeFetchCandyMachine(umi, publicKey(process.env.NEXT_PUBLIC_CANDY_MACHINE_ID!));
+	const candyMachineId = import.meta.env.VITE_CANDY_MACHINE_ID;
+	if (!candyMachineId) return null;
+
+    const candyMachine = await safeFetchCandyMachine(umi, publicKey(candyMachineId));
 	if (!candyMachine) return null;
     const candyGuard = await safeFetchCandyGuard(umi, candyMachine.mintAuthority);
 	if (!candyGuard) return null;
