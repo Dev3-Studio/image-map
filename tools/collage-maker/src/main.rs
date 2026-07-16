@@ -1,239 +1,218 @@
-//program to create a collage of images and export them in webp format along with a json file containing the image
-//coordinates in the collage
-
-use image::codecs::webp::{WebPEncoder, WebPQuality};
 use image::{GenericImageView, ImageBuffer, Rgba};
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
-use serde_json::Value;
+use libwebp_sys::WebPConfig;
+use rayon::prelude::*;
+use serde::Serialize;
+use serde_json::{Map, Value};
 use std::cmp::max;
-use walkdir::WalkDir;
+use std::fs::File;
+use std::io::{BufReader, Write};
+use std::path::{Path, PathBuf};
+use std::time::Instant;
+use webp::Encoder as WebPEncoder;
 
+#[derive(Serialize)]
 struct ImageCoords {
     x: u32,
     y: u32,
     width: u32,
 }
 
-impl Serialize for ImageCoords {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("ImageCoords", 3)?;
-        state.serialize_field("x", &self.x)?;
-        state.serialize_field("y", &self.y)?;
-        state.serialize_field("width", &self.width)?;
-        state.end()
-    }
-}
-
 fn crop_image(img: image::DynamicImage, nwidth: u32) -> image::DynamicImage {
-    //if image is too small, scale it up, then crop
     let width = max(img.width(), img.height());
     let mut nimg = img.crop_imm(0, 0, width, width);
     if width != nwidth {
         nimg = img.resize_to_fill(nwidth, nwidth, image::imageops::FilterType::Nearest);
     }
 
-    return nimg;
+    nimg
 }
 
-//create a collage of square images using image crate
+fn image_paths(path: &Path) -> Vec<PathBuf> {
+    let mut paths: Vec<_> = std::fs::read_dir(path)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.is_file())
+        .collect();
+    paths.sort_unstable();
+    paths
+}
+
 fn create_collage(
-    path: &str,
+    path: &Path,
     width: u32,
-    depth_arr: Vec<i32>,
-    path_arr: Vec<Vec<i32>>,
+    depth_arr: &[i32],
+    path_arr: &[Vec<i32>],
 ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-    let input_path = path;
-    let base_width = width;
-
-    let mut img_vec = vec![];
-    let mut coords_vec = vec![];
-
-    let dimensions = 2u32.pow((max_depth(&depth_arr) + 1) as u32);
-    let mut i = 0;
-    //iterate through all files in input and add them to the array, cropped to squares
-    for entry in std::fs::read_dir(input_path).unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        //determine image size based on depth array
-        let depth = depth_arr[i as usize];
-
-        //crop image to square
-        let mut img = image::open(path).unwrap();
-        img = crop_image(img, base_width * (2u32).pow((7 - depth) as u32));
-        img_vec.push(img);
-        i += 1;
-    }
-
-    //get the size of the collage
-    let imgx = base_width * dimensions;
-    let imgy = base_width * dimensions;
-
+    let dimensions = 2u32.pow((max_depth(depth_arr) + 1) as u32);
+    let imgx = width * dimensions;
+    let imgy = width * dimensions;
     let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
     println!("Image size: {}x{}", dimensions, dimensions);
     println!("Image Pixels: {}x{}", imgx, imgy);
 
-    //iterate through the array and paste the images on the collage
-    for (i, img) in img_vec.iter().enumerate() {
-        let (x, y) = calculate_coords(&path_arr[i], imgx as i32);
-        image::imageops::overlay(&mut imgbuf, img, x as i64, y as i64);
-        // println!("{}", i);
-        coords_vec.push(ImageCoords {
-            // name: imgName.to_string(),
-            x: x as u32,
-            y: y as u32,
-            width: img.width(),
-        });
+    let paths = image_paths(path);
+    assert_eq!(
+        paths.len(),
+        depth_arr.len(),
+        "the image count must match the number of leaves in the grid"
+    );
+
+    let coords_vec: Vec<_> = depth_arr
+        .iter()
+        .zip(path_arr)
+        .map(|(&depth, path)| {
+            let (x, y) = calculate_coords(path, imgx);
+            ImageCoords {
+                x,
+                y,
+                width: width * 2u32.pow((7 - depth) as u32),
+            }
+        })
+        .collect();
+
+    // Parallelize the expensive decode/resize stage while bounding decoded-image memory.
+    let batch_size = rayon::current_num_threads().max(1);
+    for (batch_index, path_batch) in paths.chunks(batch_size).enumerate() {
+        let offset = batch_index * batch_size;
+        let images: Vec<_> = path_batch
+            .par_iter()
+            .enumerate()
+            .map(|(index, path)| {
+                crop_image(image::open(path).unwrap(), coords_vec[offset + index].width)
+            })
+            .collect();
+
+        for (index, img) in images.iter().enumerate() {
+            let coords = &coords_vec[offset + index];
+            image::imageops::replace(&mut imgbuf, img, coords.x as i64, coords.y as i64);
+        }
     }
 
-    // save_image(imgbuf, imgx, imgy, "output/collage.webp");
-
-    //write the coords file
-    let coord_writer = std::fs::File::create("output/coords.json").unwrap();
+    let coord_writer = File::create("output/coords.json").unwrap();
     serde_json::to_writer_pretty(coord_writer, &coords_vec).unwrap();
 
-    return imgbuf;
+    imgbuf
 }
 
 fn save_subimages(
-    imgbuf: ImageBuffer<Rgba<u8>, Vec<u8>>,
+    imgbuf: &ImageBuffer<Rgba<u8>, Vec<u8>>,
     img_width: u32,
     img_height: u32,
     divisions: u32,
-) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-    for i in 0..divisions {
-        let x = (i % divisions) * (img_width / divisions);
-        let y = (i / divisions) * (img_height / divisions);
-        let subimgbuf = imgbuf
-            .view(x, y, img_width / divisions, img_height / divisions)
-            .to_image();
-        let mut writer = std::fs::File::create(format!("output/collage-sub{}.webp", i)).unwrap();
-        let encoder = WebPEncoder::new_with_quality(&mut writer, WebPQuality::lossy(25));
-        subimgbuf
-            .write_with_encoder(encoder)
-            .expect("TODO: panic message");
+) {
+    let encoder_jobs = std::env::var("COLLAGE_ENCODER_JOBS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(1)
+        .clamp(1, divisions as usize);
+
+    for start in (0..divisions).step_by(encoder_jobs) {
+        let end = (start + encoder_jobs as u32).min(divisions);
+        (start..end).into_par_iter().for_each(|i| {
+            let x = (i % divisions) * (img_width / divisions);
+            let y = (i / divisions) * (img_height / divisions);
+            let subimgbuf = imgbuf
+                .view(x, y, img_width / divisions, img_height / divisions)
+                .to_image();
+            let mut config = WebPConfig::new().unwrap();
+            config.lossless = 0;
+            config.alpha_compression = 1;
+            config.quality = 25.0;
+            config.thread_level = 1;
+            let encoded =
+                WebPEncoder::from_rgba(subimgbuf.as_raw(), subimgbuf.width(), subimgbuf.height())
+                    .encode_advanced(&config)
+                    .expect("failed to encode WebP subimage");
+            let mut writer = File::create(format!("output/collage-sub{}.webp", i)).unwrap();
+            writer.write_all(&encoded).unwrap();
+        });
     }
-    return imgbuf;
 }
 
-fn replace_image(
-    img: image::DynamicImage,
-    coords: ImageCoords,
-    collage: ImageBuffer<Rgba<u8>, Vec<u8>>,
-) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-    let mut imgbuf = collage;
-    image::imageops::overlay(&mut imgbuf, &img, coords.x as i64, coords.y as i64);
-    return imgbuf;
+fn parse_json(path: &Path) -> Value {
+    let reader = BufReader::new(File::open(path).unwrap());
+    serde_json::from_reader(reader).expect("JSON was not well-formatted")
 }
 
-fn parse_json(path: &str) -> serde_json::Value {
-    let file = std::fs::read_to_string(path).unwrap();
-    return serde_json::from_str(&*file).expect("JSON was not well-formatted");
+fn traverse_json(json: &Value, arr: &mut Vec<i32>, path_arr: &mut Vec<Vec<i32>>) {
+    traverse_json_rec(json.as_object().unwrap(), 0, arr, path_arr, &mut Vec::new());
 }
 
-fn traverse_json(json: Value, arr: &mut Vec<i32>, path_arr: &mut Vec<Vec<i32>>) -> i32 {
-    let mut i = 0;
-    let mut current_path = vec![];
-    return traverse_json_rec(
-        json.as_object().unwrap(),
-        0,
-        arr,
-        path_arr,
-        &mut i,
-        &mut current_path,
-        0,
-    );
-}
-
-//recursively decent through all 4 branches of the json file to find the depth of the tree
 fn traverse_json_rec(
-    json: &serde_json::map::Map<String, Value>,
+    json: &Map<String, Value>,
     depth: i32,
     arr: &mut Vec<i32>,
     path_arr: &mut Vec<Vec<i32>>,
-    index: &mut i32,
     current_path: &mut Vec<i32>,
-    branch: i32,
-) -> i32 {
-    if branch != 0 {
-        current_path.push(branch);
-    }
-
-    json.into_iter().for_each(|(key, value)| {
-        //base case
-        if value == &Value::Null {
+) {
+    for (key, value) in json {
+        current_path.push(key.parse::<i32>().unwrap());
+        if value.is_null() {
             arr.push(depth);
-
-            for el in current_path.into_iter() {
-                path_arr[*index as usize].push(*el);
-            }
-            path_arr[*index as usize].push(key.parse::<i32>().unwrap());
-            *index += 1;
-            return;
+            path_arr.push(current_path.clone());
+        } else {
+            traverse_json_rec(
+                value.as_object().unwrap(),
+                depth + 1,
+                arr,
+                path_arr,
+                current_path,
+            );
         }
-        traverse_json_rec(
-            value.as_object().unwrap(),
-            depth + 1,
-            arr,
-            path_arr,
-            index,
-            &mut current_path.clone(),
-            key.parse::<i32>().unwrap(),
-        );
-    });
-    return 0;
+        current_path.pop();
+    }
 }
 
-//calculate the coordinates for the top left corner of an image
-fn calculate_coords(path_arr: &Vec<i32>, image_width: i32) -> (i32, i32) {
+fn calculate_coords(path_arr: &[i32], image_width: u32) -> (u32, u32) {
     let mut x = 0;
     let mut y = 0;
-    let mut i = 1;
-    for num in path_arr.iter() {
+    let mut step = image_width;
+    for num in path_arr {
+        step /= 2;
         match num {
             1 => {}
-            2 => x += image_width / 2i32.pow(i),
-            3 => y += image_width / 2i32.pow(i),
+            2 => x += step,
+            3 => y += step,
             4 => {
-                x += image_width / 2i32.pow(i);
-                y += image_width / 2i32.pow(i);
+                x += step;
+                y += step;
             }
             _ => {}
         }
-        i += 1;
     }
-    return (x, y);
+    (x, y)
 }
 
-fn max_depth(arr: &Vec<i32>) -> i32 {
-    let mut max = 0;
-    for i in arr.iter() {
-        if *i > max {
-            max = *i;
-        }
-    }
-    return max;
+fn max_depth(arr: &[i32]) -> i32 {
+    arr.iter().copied().max().unwrap_or(0)
 }
+
 fn main() {
-    let image_path = "input/10k";
-    let json_path = "input/grid.json";
-    let num_files = WalkDir::new(image_path).into_iter().count();
+    let image_path = Path::new("input/10k");
+    let json_path = Path::new("input/grid.json");
+    std::fs::create_dir_all("output").unwrap();
 
-    let start = std::time::Instant::now();
-    let mut depth_arr: Vec<i32> = vec![];
-    let mut path_arr: Vec<Vec<i32>> = vec![];
-    for _ in 0..num_files {
-        path_arr.push(vec![]);
-    }
+    let start = Instant::now();
     let json = parse_json(json_path);
-    let _x = traverse_json(json, &mut depth_arr, &mut path_arr);
+    let mut depth_arr = Vec::new();
+    let mut path_arr = Vec::new();
+    traverse_json(&json, &mut depth_arr, &mut path_arr);
+    println!("Grid parse: {:.3}s", start.elapsed().as_secs_f64());
 
-    let image = create_collage(image_path, 120, depth_arr, path_arr);
+    let collage_start = Instant::now();
+    let image = create_collage(image_path, 120, &depth_arr, &path_arr);
+    println!(
+        "Collage creation: {:.3}s",
+        collage_start.elapsed().as_secs_f64()
+    );
+
     let image_width = image.width();
     let image_height = image.height();
-    save_subimages(image, image_width, image_height, 3);
-    println!("Time taken: {}s", start.elapsed().as_secs());
+    let encoding_start = Instant::now();
+    save_subimages(&image, image_width, image_height, 3);
+    println!(
+        "WebP encoding: {:.3}s",
+        encoding_start.elapsed().as_secs_f64()
+    );
+    println!("Time taken: {:.3}s", start.elapsed().as_secs_f64());
 }

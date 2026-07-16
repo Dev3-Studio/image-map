@@ -42,3 +42,10 @@ npm exec nx -- run collage-maker:run
 ```
 
 The Rust executable still expects its runtime `input` and `output` directories under `tools/collage-maker`; these directories remain ignored by Git.
+
+WebP tiles are encoded sequentially by default to keep peak memory bounded. On machines with additional memory, set `COLLAGE_ENCODER_JOBS` up to the number of output tiles to encode tiles concurrently:
+
+```powershell
+$env:COLLAGE_ENCODER_JOBS=3
+npm exec nx -- run collage-maker:run
+```
