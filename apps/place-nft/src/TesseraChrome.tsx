@@ -1,4 +1,4 @@
-import {useState, type DragEvent, type MouseEvent, type RefObject} from 'react'
+import {useMemo, useState, type DragEvent, type MouseEvent, type RefObject} from 'react'
 import './TesseraChrome.css'
 
 interface Point {
@@ -6,8 +6,66 @@ interface Point {
     y: number
 }
 
-export function TesseraHeader({onSearch}: {onSearch: (index: number) => void}) {
-    const [query, setQuery] = useState('')
+export function TesseraHeader({
+    activeTileIndex,
+    externalError,
+    tileCount,
+    onClearError,
+    onSearch,
+}: {
+    activeTileIndex: number | null
+    externalError: string | null
+    tileCount: number
+    onClearError: () => void
+    onSearch: (index: number) => void
+}) {
+    const [query, setQuery] = useState(activeTileIndex === null ? '' : `#${activeTileIndex}`)
+    const [localError, setLocalError] = useState<string | null>(null)
+    const [focused, setFocused] = useState(false)
+    const error = localError ?? externalError
+    const suggestions = useMemo(() => {
+        const match = query.trim().match(/^#?\s*(\d+)$/)
+        if (!match) {
+            return []
+        }
+
+        const exactIndex = Number.parseInt(match[1], 10)
+        if (exactIndex < 0 || exactIndex >= tileCount) {
+            return []
+        }
+
+        const nextIndexes = [exactIndex]
+        if (match[1].length < String(tileCount - 1).length) {
+            const prefix = Number.parseInt(`${match[1]}0`, 10)
+            for (let index = prefix; index < Math.min(prefix + 4, tileCount); index += 1) {
+                if (!nextIndexes.includes(index)) {
+                    nextIndexes.push(index)
+                }
+            }
+        }
+
+        return nextIndexes.slice(0, 5)
+    }, [query, tileCount])
+
+    const submitSearch = () => {
+        const match = query.trim().match(/^#?\s*(\d+)$/)
+        if (!match) {
+            setLocalError('Enter a tile number, such as #4281.')
+            return
+        }
+
+        const index = Number.parseInt(match[1], 10)
+        if (index < 0 || index >= tileCount) {
+            setLocalError(`Choose a tile between #0 and #${tileCount - 1}.`)
+            return
+        }
+
+        setLocalError(null)
+        onClearError()
+        setFocused(false)
+        setQuery(`#${index}`)
+        onSearch(index)
+    }
 
     return (
         <header className="tessera-header">
@@ -17,7 +75,10 @@ export function TesseraHeader({onSearch}: {onSearch: (index: number) => void}) {
             </div>
             <form
                 className="glass-surface glow-surface search-capsule"
-                onSubmit={(event) => event.preventDefault()}
+                onSubmit={(event) => {
+                    event.preventDefault()
+                    submitSearch()
+                }}
                 onPointerMove={(event) => {
                     const bounds = event.currentTarget.getBoundingClientRect()
                     event.currentTarget.style.setProperty('--glow-x', `${event.clientX - bounds.left}px`)
@@ -33,22 +94,58 @@ export function TesseraHeader({onSearch}: {onSearch: (index: number) => void}) {
                 </svg>
                 <input
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                        setQuery(event.target.value)
+                        setLocalError(null)
+                        onClearError()
+                    }}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
                     onKeyDown={(event) => {
-                        if (event.key !== 'Enter') {
-                            return
-                        }
-
-                        event.preventDefault()
-                        const index = Number.parseInt(query.replace(/[^0-9]/g, ''), 10)
-                        if (Number.isInteger(index)) {
-                            onSearch(index)
+                        if (event.key === 'Enter') {
+                            event.preventDefault()
+                            submitSearch()
                         }
                     }}
                     placeholder="Jump to tile #"
                     aria-label="Jump to tile number"
+                    aria-autocomplete="list"
+                    aria-controls="tile-search-suggestions"
+                    aria-describedby={error ? 'tile-search-error' : undefined}
+                    aria-expanded={focused && suggestions.length > 0}
+                    aria-haspopup="listbox"
+                    aria-invalid={error ? true : undefined}
+                    role="combobox"
                     inputMode="numeric"
                 />
+                {focused && suggestions.length > 0 ? (
+                    <div id="tile-search-suggestions" className="search-feedback search-suggestions" role="listbox">
+                        {suggestions.map((index) => (
+                            <button
+                                key={index}
+                                type="button"
+                                role="option"
+                                aria-selected={index === activeTileIndex}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                    setQuery(`#${index}`)
+                                    setLocalError(null)
+                                    onClearError()
+                                    setFocused(false)
+                                    onSearch(index)
+                                }}
+                            >
+                                <span>Tile #{index}</span>
+                                <small>Jump to tile</small>
+                            </button>
+                        ))}
+                    </div>
+                ) : null}
+                {error ? (
+                    <div id="tile-search-error" className="search-feedback search-error" role="alert">
+                        {error}
+                    </div>
+                ) : null}
             </form>
         </header>
     )

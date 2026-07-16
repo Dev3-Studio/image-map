@@ -1,5 +1,5 @@
 import './App.css'
-import {useRef, useState, type MouseEvent as ReactMouseEvent} from 'react'
+import {useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent} from 'react'
 import {
     TransformComponent,
     TransformWrapper,
@@ -44,20 +44,191 @@ interface UploadedTile extends Point {
     width: number
 }
 
+interface ViewportState {
+    positionX: number
+    positionY: number
+    scale: number
+}
+
+interface LocationViewportState {
+    centerX: number
+    centerY: number
+    scale: number
+}
+
 const coordsList = coordsjson as ImageCoords[]
+
+function getLocationState() {
+    const tileMatch = window.location.pathname.match(/^\/tile\/(\d+)\/?$/)
+    const rawTileIndex = tileMatch ? Number.parseInt(tileMatch[1], 10) : null
+    const params = new URLSearchParams(window.location.search)
+    const centerX = Number(params.get('cx'))
+    const centerY = Number(params.get('cy'))
+    const scale = Number(params.get('z'))
+    const viewport = params.has('cx') && params.has('cy') && params.has('z') &&
+        Number.isFinite(centerX) && Number.isFinite(centerY) &&
+        Number.isFinite(scale) && scale >= MIN_SCALE && scale <= MAX_SCALE
+        ? {centerX, centerY, scale}
+        : null
+
+    return {
+        tileIndex: rawTileIndex !== null && coordsList[rawTileIndex] ? rawTileIndex : null,
+        viewport,
+        error: rawTileIndex !== null && !coordsList[rawTileIndex]
+            ? `Choose a tile between #0 and #${coordsList.length - 1}.`
+            : null,
+    }
+}
+
+function updateLocation(
+    tileIndex: number | null,
+    viewport: ViewportState,
+    wrapper: HTMLElement,
+    mode: 'push' | 'replace',
+) {
+    const params = new URLSearchParams({
+        cx: String(Math.round(((wrapper.offsetWidth / 2 - viewport.positionX) / viewport.scale) * 100) / 100),
+        cy: String(Math.round(((wrapper.offsetHeight / 2 - viewport.positionY) / viewport.scale) * 100) / 100),
+        z: String(Math.round(viewport.scale * 10000) / 10000),
+    })
+    const nextUrl = `${tileIndex === null ? '/' : `/tile/${tileIndex}`}?${params}`
+
+    if (`${window.location.pathname}${window.location.search}` === nextUrl) {
+        return
+    }
+
+    window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', nextUrl)
+}
 
 function App() {
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
     const pointerDownRef = useRef<Point | null>(null)
     const zoomLabelRef = useRef<HTMLSpanElement | null>(null)
     const minimapViewportRef = useRef<HTMLDivElement | null>(null)
+    const selectionMarkerRef = useRef<HTMLDivElement | null>(null)
+    const locationUpdateTimeoutRef = useRef<number | null>(null)
+    const activeTileIndexRef = useRef<number | null>(null)
+    const [activeTileIndex, setActiveTileIndex] = useState<number | null>(null)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+    const [searchError, setSearchError] = useState<string | null>(null)
     const [detailLevel, setDetailLevel] = useState<DetailLevel>('preview')
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [uploads, setUploads] = useState<UploadedTile[]>([])
+
+    const positionSelectionMarker = useCallback((viewport: ViewportState) => {
+        const marker = selectionMarkerRef.current
+        const coords = activeTileIndex === null ? null : coordsList[activeTileIndex]
+        if (!marker || !coords) {
+            return
+        }
+
+        const left = viewport.positionX + coords.x * viewport.scale
+        const top = viewport.positionY + coords.y * viewport.scale
+        marker.style.transform = `translate3d(${left}px, ${top}px, 0)`
+        marker.style.width = `${coords.width * viewport.scale}px`
+        marker.style.height = `${coords.width * viewport.scale}px`
+        marker.classList.toggle('tile-selection-marker--label-below', top < 56)
+    }, [activeTileIndex])
+
+    const focusTile = useCallback((
+        index: number,
+        historyMode: 'push' | 'replace' | null,
+        locationViewport: LocationViewportState | null = null,
+        transformOverride?: ReactZoomPanPinchRef,
+    ) => {
+        const coords = coordsList[index]
+        const transform = transformOverride ?? transformRef.current
+        const wrapper = transform?.instance.wrapperComponent
+        if (!coords || !transform || !wrapper) {
+            return
+        }
+
+        const nextViewport = locationViewport ? {
+            positionX: wrapper.offsetWidth / 2 - locationViewport.centerX * locationViewport.scale,
+            positionY: wrapper.offsetHeight / 2 - locationViewport.centerY * locationViewport.scale,
+            scale: locationViewport.scale,
+        } : (() => {
+            const scale = Math.min(
+                MAX_SCALE,
+                Math.max(
+                    MIN_SCALE,
+                    Math.min(wrapper.offsetWidth, wrapper.offsetHeight) *
+                        JUMP_TO_TILE_VIEWPORT_RATIO / coords.width,
+                ),
+            )
+
+            return {
+                positionX: wrapper.offsetWidth / 2 - (coords.x + coords.width / 2) * scale,
+                positionY: wrapper.offsetHeight / 2 - (coords.y + coords.width / 2) * scale,
+                scale,
+            }
+        })()
+
+        activeTileIndexRef.current = index
+        setActiveTileIndex(index)
+        setSelectedImageIndex(null)
+        setSearchError(null)
+        if (historyMode) {
+            updateLocation(index, nextViewport, wrapper, historyMode)
+        }
+        transform.setTransform(
+            nextViewport.positionX,
+            nextViewport.positionY,
+            nextViewport.scale,
+            locationViewport ? 0 : 420,
+            'easeOut',
+        )
+    }, [])
+
+    const restoreLocation = useCallback((transformOverride?: ReactZoomPanPinchRef) => {
+        const {tileIndex, viewport, error} = getLocationState()
+        setSearchError(error)
+        setSelectedImageIndex(null)
+
+        if (tileIndex !== null) {
+            focusTile(tileIndex, null, viewport, transformOverride)
+            return
+        }
+
+        activeTileIndexRef.current = null
+        setActiveTileIndex(null)
+        const transform = transformOverride ?? transformRef.current
+        const wrapper = transform?.instance.wrapperComponent
+        if (viewport && transform && wrapper) {
+            transform.setTransform(
+                wrapper.offsetWidth / 2 - viewport.centerX * viewport.scale,
+                wrapper.offsetHeight / 2 - viewport.centerY * viewport.scale,
+                viewport.scale,
+                0,
+                'easeOut',
+            )
+        } else if (transform) {
+            transform.centerView(1, 0, 'easeOut')
+        }
+    }, [focusTile])
+
+    useEffect(() => {
+        const handlePopState = () => restoreLocation()
+        window.addEventListener('popstate', handlePopState)
+
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [restoreLocation])
+
+    useEffect(() => {
+        const state = transformRef.current?.state
+        if (state) {
+            positionSelectionMarker(state)
+        }
+    }, [activeTileIndex, positionSelectionMarker])
+
+    useEffect(() => () => {
+        if (locationUpdateTimeoutRef.current !== null) {
+            window.clearTimeout(locationUpdateTimeoutRef.current)
+        }
+    }, [])
 
     const handleMapClick = (event: ReactMouseEvent<HTMLDivElement>) => {
         const pointerDown = pointerDownRef.current
@@ -90,7 +261,13 @@ function App() {
                 point.y > coords.y &&
                 point.y < coords.y + coords.width
             ) {
+                activeTileIndexRef.current = index
+                setActiveTileIndex(index)
                 setSelectedImageIndex(index)
+                const wrapper = transformRef.current?.instance.wrapperComponent
+                if (wrapper) {
+                    updateLocation(index, state, wrapper, 'push')
+                }
                 return
             }
         }
@@ -112,11 +289,12 @@ function App() {
                     maxScale={MAX_SCALE}
                     initialScale={1}
                     smooth={false}
-                    centerOnInit
                     doubleClick={{disabled: true}}
                     wheel={{step: 0.15}}
+                    onInit={(ref) => restoreLocation(ref)}
                     onTransform={(ref) => {
                         const {positionX, positionY, scale} = ref.state
+                        positionSelectionMarker(ref.state)
                         const nextDetailLevel = scale >= FULL_RESOLUTION_ZOOM
                             ? 'originals'
                             : scale >= HIGH_RESOLUTION_ZOOM
@@ -143,6 +321,21 @@ function App() {
                             minimapViewportRef.current.style.width = `${width}px`
                             minimapViewportRef.current.style.height = `${height}px`
                         }
+
+                        if (locationUpdateTimeoutRef.current !== null) {
+                            window.clearTimeout(locationUpdateTimeoutRef.current)
+                        }
+                        locationUpdateTimeoutRef.current = window.setTimeout(() => {
+                            const wrapper = ref.instance.wrapperComponent
+                            if (wrapper) {
+                                updateLocation(
+                                    activeTileIndexRef.current,
+                                    {positionX, positionY, scale},
+                                    wrapper,
+                                    'replace',
+                                )
+                            }
+                        }, 180)
                     }}
                 >
                     <TransformComponent wrapperClass="transformWrapper" contentClass="transformComponent">
@@ -199,33 +392,25 @@ function App() {
                 </TransformWrapper>
             </div>
 
+            {activeTileIndex !== null && !picking && !uploadOpen ? (
+                <div
+                    key={`marker-${activeTileIndex}`}
+                    ref={selectionMarkerRef}
+                    className="tile-selection-marker"
+                    aria-live="polite"
+                >
+                    <span>Tile #{activeTileIndex}</span>
+                </div>
+            ) : null}
+
             {!picking && !uploadOpen ? (
                 <TesseraHeader
-                    onSearch={(index) => {
-                        const coords = coordsList[index]
-                        const transform = transformRef.current
-                        const wrapper = transform?.instance.wrapperComponent
-                        if (!coords || !transform || !wrapper) {
-                            return
-                        }
-
-                        const scale = Math.min(
-                            MAX_SCALE,
-                            Math.max(
-                                MIN_SCALE,
-                                Math.min(wrapper.offsetWidth, wrapper.offsetHeight) *
-                                    JUMP_TO_TILE_VIEWPORT_RATIO / coords.width,
-                            ),
-                        )
-                        transform.setTransform(
-                            wrapper.offsetWidth / 2 - (coords.x + coords.width / 2) * scale,
-                            wrapper.offsetHeight / 2 - (coords.y + coords.width / 2) * scale,
-                            scale,
-                            420,
-                            'easeOut',
-                        )
-                        setSelectedImageIndex(null)
-                    }}
+                    key={`header-${activeTileIndex ?? 'none'}`}
+                    activeTileIndex={activeTileIndex}
+                    externalError={searchError}
+                    tileCount={coordsList.length}
+                    onClearError={() => setSearchError(null)}
+                    onSearch={(index) => focusTile(index, 'push')}
                 />
             ) : null}
 

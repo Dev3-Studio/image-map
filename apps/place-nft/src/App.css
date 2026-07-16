@@ -69,6 +69,57 @@
   animation: tile-mint-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.tile-selection-marker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 12;
+  min-width: 4px;
+  min-height: 4px;
+  border: 2px solid #fff;
+  outline: 2px solid rgba(91, 91, 214, 0.96);
+  outline-offset: 1px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 0 rgba(91, 91, 214, 0.62), 0 8px 28px rgba(21, 27, 59, 0.24);
+  pointer-events: none;
+  animation: tile-selection-pulse 1.5s var(--ease-out) 2;
+  will-change: transform, width, height;
+}
+
+.tile-selection-marker span {
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: -2px;
+  width: max-content;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(27, 31, 59, 0.84);
+  box-shadow: 0 6px 18px rgba(12, 18, 38, 0.28);
+  backdrop-filter: blur(14px);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.tile-selection-marker--label-below span {
+  top: calc(100% + 9px);
+  bottom: auto;
+}
+
+@keyframes tile-selection-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(91, 91, 214, 0.52), 0 8px 28px rgba(21, 27, 59, 0.24);
+  }
+
+  50% {
+    box-shadow: 0 0 0 12px rgba(91, 91, 214, 0), 0 8px 28px rgba(21, 27, 59, 0.24);
+  }
+}
+
 @keyframes tile-mint-in {
   from {
     opacity: 0;
