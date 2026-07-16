@@ -1,11 +1,18 @@
 import './App.css'
 import {useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent} from 'react'
+import useSWR from 'swr'
 import {
     TransformComponent,
     TransformWrapper,
     type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
 import coordsjson from './assets/coords.json'
+import {
+    bundledRelease,
+    currentReleaseUrl,
+    loadCollageRelease,
+    type CollageRelease,
+} from './collageRelease.ts'
 import ImageOverlay from './ImageOverlay.tsx'
 import IIIFImageLayer from './IIIFImageLayer.tsx'
 import {loadIIIFManifest, type IIIFMapDefinition} from './iiifManifest.ts'
@@ -54,6 +61,15 @@ interface LocationViewportState {
 }
 
 const fallbackCoordsList = coordsjson as ImageCoords[]
+const fallbackMapDefinition: IIIFMapDefinition = {
+    width: FALLBACK_MAP_SIZE,
+    height: FALLBACK_MAP_SIZE,
+    placements: fallbackCoordsList.map((coords, index) => ({
+        ...coords,
+        height: coords.width,
+        id: `fallback-${index}`,
+    })),
+}
 
 function getLocationState(coordsList: ImageCoords[]) {
     const tileMatch = window.location.pathname.match(/^\/tile\/(\d+)\/?$/)
@@ -100,9 +116,11 @@ function updateLocation(
 function TesseraMap({
     mapDefinition,
     manifestReady,
+    collagePreviewUrl,
 }: {
     mapDefinition: IIIFMapDefinition
     manifestReady: boolean
+    collagePreviewUrl: string
 }) {
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
     const pointerDownRef = useRef<Point | null>(null)
@@ -350,7 +368,7 @@ function TesseraMap({
                             style={{width: mapDefinition.width, height: mapDefinition.height}}
                         >
                             <img
-                                src="/collage.webp"
+                                src={collagePreviewUrl}
                                 alt="Tessera collage map"
                                 id="collage"
                                 fetchPriority="high"
@@ -454,7 +472,7 @@ function TesseraMap({
 
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
                 <ImageOverlay
-                    imageUrl={coordsList[selectedImageIndex].thumbnail ?? '/collage.webp'}
+                    imageUrl={coordsList[selectedImageIndex].thumbnail ?? collagePreviewUrl}
                     title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
                     tileCount={coordsList.length}
                     onClick={() => setSelectedImageIndex(null)}
@@ -499,54 +517,44 @@ function TesseraMap({
 }
 
 function App() {
-    const [mapState, setMapState] = useState<{
-        definition: IIIFMapDefinition
-        manifestReady: boolean
-    } | null>(null)
-
-    useEffect(() => {
-        let cancelled = false
-
-        loadIIIFManifest()
-            .then((definition) => {
-                if (!cancelled) {
-                    setMapState({definition, manifestReady: true})
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setMapState({
-                        definition: {
-                            width: FALLBACK_MAP_SIZE,
-                            height: FALLBACK_MAP_SIZE,
-                            placements: fallbackCoordsList.map((coords, index) => ({
-                                ...coords,
-                                height: coords.width,
-                                id: `fallback-${index}`,
-                            })),
-                        },
-                        manifestReady: false,
-                    })
-                }
-            })
-
-        return () => {
-            cancelled = true
-        }
-    }, [])
-
-    if (!mapState) {
-        return (
-            <main className="tessera-app map-loading" aria-busy="true">
-                <img src="/collage.webp" alt="Preparing the Tessera collage map"/>
-            </main>
-        )
-    }
+    const releaseUrl = currentReleaseUrl()
+    const {data: remoteRelease} = useSWR(
+        releaseUrl,
+        loadCollageRelease,
+        {
+            refreshInterval: 15_000,
+            refreshWhenHidden: false,
+            revalidateOnFocus: true,
+        },
+    )
+    const requestedRelease = remoteRelease ?? bundledRelease
+    const {data: loadedRelease} = useSWR(
+        [
+            'collage-map',
+            requestedRelease.generationId,
+            requestedRelease.manifestUrl,
+            requestedRelease.previewUrl,
+        ] as const,
+        async ([, generationId, manifestUrl, previewUrl]) => ({
+            release: {
+                ...requestedRelease,
+                generationId,
+                manifestUrl,
+                previewUrl,
+            } satisfies CollageRelease,
+            definition: await loadIIIFManifest(manifestUrl),
+        }),
+        {keepPreviousData: true},
+    )
+    const activeRelease = loadedRelease?.release ?? bundledRelease
+    const mapDefinition = loadedRelease?.definition ?? fallbackMapDefinition
 
     return (
         <TesseraMap
-            mapDefinition={mapState.definition}
-            manifestReady={mapState.manifestReady}
+            key={activeRelease.generationId}
+            mapDefinition={mapDefinition}
+            manifestReady={Boolean(loadedRelease)}
+            collagePreviewUrl={activeRelease.previewUrl}
         />
     )
 }

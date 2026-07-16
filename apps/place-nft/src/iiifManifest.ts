@@ -47,14 +47,8 @@ export interface IIIFMapDefinition {
     placements: IIIFPlacement[]
 }
 
-let manifestPromise: Promise<IIIFMapDefinition> | null = null
-
-export function loadIIIFManifest() {
-    if (manifestPromise) {
-        return manifestPromise
-    }
-
-    manifestPromise = fetch('/iiif/manifest.json')
+export function loadIIIFManifest(url: string) {
+    return fetch(url)
         .then((response) => {
             if (!response.ok) {
                 throw new Error(`IIIF manifest request failed with ${response.status}`)
@@ -99,10 +93,4 @@ export function loadIIIFManifest() {
                 placements,
             }
         })
-        .catch((error) => {
-            manifestPromise = null
-            throw error
-        })
-
-    return manifestPromise
 }

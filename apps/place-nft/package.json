@@ -19,7 +19,8 @@
     "@solana/web3.js": "^1.90.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-zoom-pan-pinch": "^4.0.3"
+    "react-zoom-pan-pinch": "^4.0.3",
+    "swr": "^2.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
