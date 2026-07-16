@@ -1,37 +1,55 @@
+import {useMemo} from 'react'
+import {BaseWalletMultiButton} from '@solana/wallet-adapter-react-ui'
+import {mplCandyMachine} from '@metaplex-foundation/mpl-candy-machine'
+import {createUmi} from '@metaplex-foundation/umi-bundle-defaults'
+import {useWallet} from '@solana/wallet-adapter-react'
+import {walletAdapterIdentity} from '@metaplex-foundation/umi-signer-wallet-adapters'
+import {clusterApiUrl} from '@solana/web3.js'
+import useFetchCandyMachine from './hooks/useFetchCandyMachine'
 import './ImageOverlay.css'
-import {WalletMultiButton} from "@solana/wallet-adapter-react-ui";
-import { mplCandyMachine } from "@metaplex-foundation/mpl-candy-machine";
-import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
-import useFetchCandyMachine from './hooks/useFetchCandyMachine';
-import {useWallet} from "@solana/wallet-adapter-react";
-import {walletAdapterIdentity} from "@metaplex-foundation/umi-signer-wallet-adapters";
-import { clusterApiUrl } from '@solana/web3.js';
-import { useMemo } from 'react';
-function ImageOverlay({filename, title, onClick}: { filename: string|null, title:string, onClick: () => void }) {
-    const wallet = useWallet();
+
+function ImageOverlay({filename, title, onClick}: {filename: string; title: string; onClick: () => void}) {
+    const wallet = useWallet()
     const umi = useMemo(
-        () => createUmi(import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet'), { commitment: 'confirmed' })
+        () => createUmi(import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet'), {commitment: 'confirmed'})
             .use(walletAdapterIdentity(wallet))
             .use(mplCandyMachine()),
         [wallet],
-    );
-    useFetchCandyMachine({ umi });
+    )
+    useFetchCandyMachine({umi})
 
-    return(
-        <div id={'imageOverlay'}>
-            <button className={'overlay-close'} onClick={onClick}>x</button>
-            <img className="overlay-image" src={`../fullres/${filename}`} alt="overlay"/>
-            <h1 className={'overlay-name'}>{title}</h1>
-            <h5 className={'overlay-owner'}>Owner: 0x123</h5>
-            <p className={'overlay-description'}>Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown
-                printer took a galley of type and scrambled it to make a type specimen book. It has survived not only
-                five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was
-                popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more
-                recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
-            <WalletMultiButton />
-        </div>
+    return (
+        <aside id="imageOverlay" className="glass-surface" aria-label="Tile detail">
+            <button className="overlay-close round-button" type="button" aria-label="Close tile detail" onClick={onClick}>
+                <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
+                    <line x1="1.5" y1="1.5" x2="9.5" y2="9.5"/>
+                    <line x1="9.5" y1="1.5" x2="1.5" y2="9.5"/>
+                </svg>
+            </button>
+            <img className="overlay-image" src={`/fullres/${filename}`} alt={`Artwork for ${title}`}/>
+            <div className="overlay-copy">
+                <h1>{title}</h1>
+                <div className="overlay-owner">
+                    <span>Owner</span>
+                    <code>0x123…9fe</code>
+                </div>
+                <p>Minted to the Tessera collage · Jan 12, 2026. One of 10,000 tiles.</p>
+            </div>
+            <div className="overlay-wallet-action">
+                <BaseWalletMultiButton
+                    labels={{
+                        'change-wallet': 'Change wallet',
+                        connecting: 'Connecting…',
+                        'copy-address': 'Copy address',
+                        copied: 'Copied',
+                        disconnect: 'Disconnect',
+                        'has-wallet': 'Connect',
+                        'no-wallet': 'Select wallet',
+                    }}
+                />
+            </div>
+        </aside>
     )
 }
 
-export default ImageOverlay;
+export default ImageOverlay

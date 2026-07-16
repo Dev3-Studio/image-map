@@ -1,49 +1,150 @@
-
-#imageOverlay{
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    /*right: 0;*/
-    /*bottom: 0;*/
-    z-index: 100;
-    /*display: flex;*/
-    /*justify-content: center;*/
-    /*align-items: center;*/
-    background-color: rgba(26, 26, 26, 0.5);
-    max-width: 400px;
-    display: flex;
-    flex-direction: column;
+#imageOverlay {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 25;
+  display: flex;
+  width: 362px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 40px rgba(25, 35, 60, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  animation: panel-in 420ms var(--ease-out) both;
 }
 
-.overlay-image{
-    width: 300px;
-    margin: 0 3rem;
-    border-radius: 4px;
-    border: 5px solid #535bf2;
-    /*height: auto;*/
+.overlay-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
 }
 
-.overlay-description{
-    padding: 1rem;
-    text-align: center;
-    /*font-size: 1.5rem;*/
-    background-color: #1a1a1a;
-    margin: 0;
+.overlay-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: 0 4px 18px rgba(25, 35, 60, 0.2);
+  animation: panel-item-in 450ms 80ms var(--ease-out) both;
 }
 
-.overlay-name{
-    margin: 1rem;
+.overlay-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--ink);
+  animation: panel-item-in 450ms 160ms var(--ease-out) both;
 }
 
-.overlay-owner{
-    margin: 1rem;
-    font-size: 0.8rem;
+.overlay-copy h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
-.overlay-close{
-    margin: 1rem;
-    align-self: flex-end;
-    width: 5rem;
-    background-color: #be2e2e;
+.overlay-owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.overlay-owner > span {
+  color: var(--ink-muted);
+}
+
+.overlay-owner code {
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(28, 39, 51, 0.08);
+  font: 600 12px/1.35 ui-monospace, Menlo, Consolas, monospace;
+}
+
+.overlay-copy p {
+  margin: 6px 0 0;
+  color: rgba(28, 39, 51, 0.7);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.overlay-wallet-action {
+  width: 100%;
+  margin-top: auto;
+  animation: panel-item-in 450ms 240ms var(--ease-out) both;
+}
+
+.overlay-wallet-action .wallet-adapter-dropdown {
+  width: 100%;
+}
+
+#imageOverlay .overlay-wallet-action .wallet-adapter-button {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 20px rgba(91, 91, 214, 0.35);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1;
+  transition: filter 200ms ease, transform 250ms var(--spring);
+}
+
+#imageOverlay .overlay-wallet-action .wallet-adapter-button:hover {
+  background: var(--accent);
+  filter: brightness(0.88);
+  transform: translateY(-1px);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes panel-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  #imageOverlay {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    width: auto;
+    max-height: min(72vh, 620px);
+    border-radius: 24px;
+  }
+
+  .overlay-image {
+    width: min(100%, 260px);
+    align-self: center;
+  }
 }
