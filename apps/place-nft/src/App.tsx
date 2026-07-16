@@ -111,6 +111,8 @@ function App() {
     const [activeTileIndex, setActiveTileIndex] = useState<number | null>(null)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
     const [searchError, setSearchError] = useState<string | null>(null)
+    const [guidanceVisible, setGuidanceVisible] = useState(true)
+    const [usesTouchGestures] = useState(() => window.matchMedia('(pointer: coarse)').matches)
     const [detailLevel, setDetailLevel] = useState<DetailLevel>('preview')
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
@@ -278,7 +280,9 @@ function App() {
             <div
                 className={`map ${picking ? 'map--picking' : ''}`}
                 onClick={handleMapClick}
+                onWheelCapture={() => setGuidanceVisible(false)}
                 onPointerDownCapture={(event) => {
+                    setGuidanceVisible(false)
                     pointerDownRef.current = {x: event.clientX, y: event.clientY}
                 }}
             >
@@ -392,6 +396,13 @@ function App() {
                 </TransformWrapper>
             </div>
 
+            {guidanceVisible && !picking && !uploadOpen ? (
+                <div className="glass-surface map-guidance" role="status">
+                    Drag to explore <span aria-hidden="true">·</span>{' '}
+                    {usesTouchGestures ? 'Pinch' : 'Scroll'} to zoom
+                </div>
+            ) : null}
+
             {activeTileIndex !== null && !picking && !uploadOpen ? (
                 <div
                     key={`marker-${activeTileIndex}`}
@@ -410,7 +421,10 @@ function App() {
                     externalError={searchError}
                     tileCount={coordsList.length}
                     onClearError={() => setSearchError(null)}
-                    onSearch={(index) => focusTile(index, 'push')}
+                    onSearch={(index) => {
+                        setGuidanceVisible(false)
+                        focusTile(index, 'push')
+                    }}
                 />
             ) : null}
 
@@ -418,6 +432,7 @@ function App() {
                 <Minimap
                     viewportRef={minimapViewportRef}
                     onNavigate={(event) => {
+                        setGuidanceVisible(false)
                         const transform = transformRef.current
                         if (!transform) {
                             return
