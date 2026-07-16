@@ -1,0 +1,28 @@
+#toolbar{
+    display: flex;
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    justify-content: center;
+    /*background: linear-gradient(to right, #5362f2, #7678ed);*/
+    padding: 10px 0;
+}
+
+
+#toolbar > * {
+    /*flex: 1;*/
+    border-radius: 0;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background-color: rgba(36, 36, 36, 0.75);
+    color: white;
+    transition: background-color 0.3s ease;
+
+
+}
+
+#toolbar > *:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
