@@ -19,8 +19,11 @@ import {
 import {HIGH_RESOLUTION_TILE_URLS} from './imageTiles.ts'
 
 const MAP_SIZE = 7680
+const MIN_SCALE = 0.08
+const MAX_SCALE = 8
 const HIGH_RESOLUTION_ZOOM = 1.1
 const FULL_RESOLUTION_ZOOM = 1.5
+const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
 const HIGH_RESOLUTION_PRELOAD_ORDER = [4, 1, 3, 5, 7, 0, 2, 6, 8]
 const preloadedHighResolutionImages: HTMLImageElement[] = []
 
@@ -105,8 +108,8 @@ function App() {
                 <TransformWrapper
                     ref={transformRef}
                     limitToBounds={false}
-                    minScale={0.08}
-                    maxScale={8}
+                    minScale={MIN_SCALE}
+                    maxScale={MAX_SCALE}
                     initialScale={1}
                     smooth={false}
                     centerOnInit
@@ -201,19 +204,27 @@ function App() {
                     onSearch={(index) => {
                         const coords = coordsList[index]
                         const transform = transformRef.current
-                        if (!coords || !transform) {
+                        const wrapper = transform?.instance.wrapperComponent
+                        if (!coords || !transform || !wrapper) {
                             return
                         }
 
-                        const scale = Math.max(transform.state.scale, 1.2)
+                        const scale = Math.min(
+                            MAX_SCALE,
+                            Math.max(
+                                MIN_SCALE,
+                                Math.min(wrapper.offsetWidth, wrapper.offsetHeight) *
+                                    JUMP_TO_TILE_VIEWPORT_RATIO / coords.width,
+                            ),
+                        )
                         transform.setTransform(
-                            window.innerWidth / 2 - (coords.x + coords.width / 2) * scale,
-                            window.innerHeight / 2 - (coords.y + coords.width / 2) * scale,
+                            wrapper.offsetWidth / 2 - (coords.x + coords.width / 2) * scale,
+                            wrapper.offsetHeight / 2 - (coords.y + coords.width / 2) * scale,
                             scale,
                             420,
                             'easeOut',
                         )
-                        setSelectedImageIndex(index)
+                        setSelectedImageIndex(null)
                     }}
                 />
             ) : null}
