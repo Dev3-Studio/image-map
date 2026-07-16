@@ -8,17 +8,26 @@
   height: 100vh;
 }
 
-#collage{
-  overflow-clip-margin: content-box;
-  overflow: clip;
+.map {
+  width: 100%;
+  height: 100%;
 }
 
-.transformWrapper {
-  max-width: 100%;
-  max-height: 100vh;
+#collage{
+  display: block;
+  width: 7680px;
+  height: 7680px;
+  overflow-clip-margin: content-box;
+  overflow: clip;
+  user-select: none;
+}
+
+.map .transformWrapper {
+  max-width: none;
+  max-height: none;
   position: relative;
-  width: fit-content;
-  height: fit-content;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   -webkit-touch-callout: none;
   user-select: none;
@@ -27,10 +36,10 @@
 }
 
 .transformComponent{
-  display: flex;
-  flex-wrap: wrap;
+  display: block;
+  position: relative;
   width: fit-content;
-    height: fit-content;
+  height: fit-content;
   margin: 0;
   padding: 0;
   transform-origin: 0 0;

@@ -6,9 +6,10 @@ import coordsjson from './assets/coords.json';
 import ImageOverlay from "./ImageOverlay.tsx";
 const coordsList = coordsjson as imageCoords[];
 import Toolbar from "./Toolbar.tsx";
-// @ts-expect-error not used for testing
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import ImageGrid from "./ImageGrid.tsx";
+
+const HIGH_RESOLUTION_ZOOM = 1.1;
+
 interface coords{
     x: number,
     y: number
@@ -34,22 +35,17 @@ function App() {
             }
         }
     }
-    const handleZoom = (ref: ReactZoomPanPinchRef) => {
-        setZoom(ref.state.scale);
-        console.log('zoom' + ref.state.scale)
-        // setRelativeMousePos({ x: mousePos.x * ref.state.scale, y: mousePos.y * ref.state.scale })
-    }
     const handlePan = (ref: ReactZoomPanPinchRef, event: TouchEvent | MouseEvent) => {
         if ("clientX" in event) {
             setRelativeMousePos({
-                x: (event.clientX - ref.state.positionX) / zoom,
-                y: (event.clientY - ref.state.positionY) / zoom
+                x: (event.clientX - ref.state.positionX) / ref.state.scale,
+                y: (event.clientY - ref.state.positionY) / ref.state.scale
             })
         }
     }
     const [selectedImage, setSelectedImage] = useState<string|null>(null);
     const [relativeMousePos, setRelativeMousePos] = useState<coords>({x: 0, y: 0});
-    const [zoom, setZoom] = useState<number>(1);
+    const [showHighResolution, setShowHighResolution] = useState<boolean>(false);
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
     function closeDialog() {
@@ -59,14 +55,19 @@ function App() {
   return (
     <div className={'container'}>
         <div onClick={handleClick} className={'map'}>
-            <TransformWrapper limitToBounds={false} minScale={0.1} initialScale={1} doubleClick={{ disabled: true }}
-                              centerOnInit={true} onZoomStop={(ref: ReactZoomPanPinchRef) => handleZoom(ref)}
-                              // minPositionX={-100} minPositionY={-100} maxPositionX={9000} maxPositionY={9000}
-                              onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)
-            }>
+            <TransformWrapper
+                limitToBounds={false}
+                minScale={0.1}
+                initialScale={1}
+                doubleClick={{ disabled: true }}
+                centerOnInit={true}
+                onTransform={(ref: ReactZoomPanPinchRef) =>
+                    setShowHighResolution(ref.state.scale >= HIGH_RESOLUTION_ZOOM)}
+                onPanningStop={(ref: ReactZoomPanPinchRef, event) => handlePan(ref, event)}
+            >
                 <TransformComponent  wrapperClass={'transformWrapper'} contentClass={'transformComponent'}>
-                    {<img src={collage} alt="collage" id={'collage'}/>}
-                    {/*{(zoom >= 0.5) && <ImageGrid />}*/}
+                    <img src={collage} alt="Collage map" id={'collage'} draggable={false}/>
+                    <ImageGrid visible={showHighResolution}/>
                 </TransformComponent>
                 <Toolbar/>
             </TransformWrapper>
