@@ -62,6 +62,7 @@ function App() {
                 limitToBounds={false}
                 minScale={0.1}
                 initialScale={1}
+                smooth={false}
                 doubleClick={{ disabled: true }}
                 centerOnInit={true}
                 onTransform={(ref: ReactZoomPanPinchRef) =>
