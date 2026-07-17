@@ -1,8 +1,8 @@
 .map-environment {
-  --atmosphere-reflection: 0.28;
-  --atmosphere-frost: 0.16;
-  --atmosphere-tint: 0.2;
-  --atmosphere-depth: 0.26;
+  --atmosphere-reflection: 0.18;
+  --atmosphere-frost: 0.08;
+  --atmosphere-tint: 0.12;
+  --atmosphere-depth: 0.2;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -22,20 +22,36 @@
 }
 
 .map-environment::before {
-  background: linear-gradient(125deg, transparent 15%, rgba(255, 255, 255, 0.82) 50%, transparent 85%);
-  filter: blur(calc(32px + var(--atmosphere-frost) * 48px));
-  opacity: calc(var(--atmosphere-reflection) * 0.18);
+  z-index: 1;
+  background:
+    linear-gradient(rgb(255 255 255 / calc(var(--atmosphere-frost) * 0.14)), rgb(255 255 255 / calc(var(--atmosphere-frost) * 0.14))),
+    linear-gradient(
+      125deg,
+      transparent 12%,
+      rgb(255 255 255 / calc(0.04 + var(--atmosphere-reflection) * 0.28)) 50%,
+      transparent 88%
+    );
+  backdrop-filter: blur(calc(var(--atmosphere-frost) * 5px));
+  filter: blur(calc(18px + var(--atmosphere-frost) * 52px));
 }
 
 .map-environment::after {
+  z-index: 2;
   background:
-    radial-gradient(ellipse at 50% 48%, transparent 48%, rgba(177, 191, 215, 0.2) 100%),
-    linear-gradient(rgba(190, 205, 238, 0.12), rgba(190, 205, 238, 0.12));
-  background-blend-mode: multiply;
-  opacity: calc(var(--atmosphere-depth) * 0.5 + var(--atmosphere-tint) * 0.08);
+    radial-gradient(
+      ellipse at 50% 48%,
+      transparent 42%,
+      rgb(135 155 195 / calc(var(--atmosphere-depth) * 0.34)) 100%
+    ),
+    linear-gradient(
+      rgb(180 194 255 / calc(var(--atmosphere-tint) * 0.18)),
+      rgb(180 194 255 / calc(var(--atmosphere-tint) * 0.18))
+    );
 }
 
 .map-environment__canvas {
+  position: relative;
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;

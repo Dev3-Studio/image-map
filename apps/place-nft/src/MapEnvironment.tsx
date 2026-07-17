@@ -30,10 +30,10 @@ interface AtmosphereShader {
 
 const STORAGE_KEY = 'tessera-atmosphere-settings'
 const DEFAULT_SETTINGS: AtmosphereSettings = {
-    reflection: 0.28,
-    frost: 0.16,
-    tint: 0.2,
-    depth: 0.26,
+    reflection: 0.18,
+    frost: 0.08,
+    tint: 0.12,
+    depth: 0.2,
 }
 const CONTROLS: Array<{
     key: keyof AtmosphereSettings
@@ -74,7 +74,7 @@ void main() {
     float refraction = sin(vUv.x * 5.0 + uTime * 0.035)
         * sin(vUv.y * 7.0 - uTime * 0.028)
         * uFrost
-        * 0.006;
+        * 0.025;
     vec2 glassUv = vUv + vec2(refraction, refraction * 0.7);
     vec2 center = vec2(
         0.5 + uPointer.x * 0.025 + drift,
@@ -89,14 +89,16 @@ void main() {
     vec3 upperColor = vec3(0.992, 0.994, 1.0);
     vec3 color = mix(lowerColor, upperColor, verticalFade);
     color += ambientLight * vec3(0.022, 0.025, 0.038);
-    color -= edgeShade * uDepth * vec3(0.048, 0.052, 0.068);
+    color -= edgeShade * uDepth * vec3(0.14, 0.15, 0.19);
 
     float reflectionLine = glassUv.x * 0.72 + glassUv.y * 0.42;
     float reflectionCenter = 0.68 + uPointer.x * 0.04 + sin(uTime * 0.045) * 0.016;
     float sheen = exp(-pow((reflectionLine - reflectionCenter) * 2.25, 2.0));
-    color += sheen * uReflection * vec3(0.07, 0.075, 0.09);
-    color = mix(color, color * vec3(0.96, 0.985, 1.055), uTint * 0.55);
-    color += (random(gl_FragCoord.xy) - 0.5) * (0.002 + uFrost * 0.01);
+    color += sheen * uReflection * vec3(0.22, 0.24, 0.3);
+    color = mix(color, vec3(0.975, 0.982, 1.0), uFrost * 0.22);
+    color += uTint * vec3(-0.055, -0.02, 0.09);
+    color += (random(gl_FragCoord.xy) - 0.5) * (0.002 + uFrost * 0.024);
+    color = clamp(color, 0.0, 1.0);
 
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
