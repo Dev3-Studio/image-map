@@ -5,14 +5,10 @@ import {
     TransformWrapper,
     type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
-import coordsjson from './assets/coords.json'
 import IIIFImageLayer from './IIIFImageLayer.tsx'
-import {loadIIIFManifest, type IIIFMapDefinition} from './iiifManifest.ts'
-import {
-    loadStressTestMap,
-    STRESS_PREVIEW_AVIF_URL,
-    STRESS_PREVIEW_URL,
-} from './stressTestMap.ts'
+import type {IIIFMapDefinition} from './iiifManifest.ts'
+import {useMapDefinition} from './hooks/useMapDefinition.ts'
+import Landing from './Landing.tsx'
 import Toolbar from './Toolbar.tsx'
 import {
     Minimap,
@@ -23,7 +19,7 @@ import {
 
 const ImageOverlay = lazy(() => import('./ImageOverlay.tsx'))
 
-const FALLBACK_MAP_SIZE = 768
+const COLLAGE_PATH = '/collage'
 const MIN_SCALE = 0.04
 const MAX_SCALE = 8
 const MEDIUM_RESOLUTION_ZOOM = 0.14
@@ -37,11 +33,6 @@ type DetailLevel = 'preview' | 'medium' | 'images'
 interface Point {
     x: number
     y: number
-}
-
-interface ImageCoords extends Point {
-    width: number
-    height?: number
 }
 
 interface UploadedTile extends Point {
@@ -62,9 +53,7 @@ interface LocationViewportState {
     scale: number
 }
 
-const fallbackCoordsList = coordsjson as ImageCoords[]
-
-function getLocationState(coordsList: ImageCoords[]) {
+function getLocationState(coordsList: IIIFMapDefinition['placements']) {
     const tileMatch = window.location.pathname.match(/^\/tile\/(\d+)\/?$/)
     const rawTileIndex = tileMatch ? Number.parseInt(tileMatch[1], 10) : null
     const params = new URLSearchParams(window.location.search)
@@ -101,7 +90,7 @@ function updateLocation(
     if (demo) {
         params.set('demo', demo)
     }
-    const nextUrl = `${tileIndex === null ? '/' : `/tile/${tileIndex}`}?${params}`
+    const nextUrl = `${tileIndex === null ? COLLAGE_PATH : `/tile/${tileIndex}`}?${params}`
 
     if (`${window.location.pathname}${window.location.search}` === nextUrl) {
         return
@@ -559,55 +548,65 @@ function TesseraMap({
     )
 }
 
+type Route = 'landing' | 'map'
+
+function getRoute(): Route {
+    const path = window.location.pathname
+    return /^\/tile\/\d+\/?$/.test(path) || path === COLLAGE_PATH || path === `${COLLAGE_PATH}/`
+        ? 'map'
+        : 'landing'
+}
+
+function resolveInitialRoute(): Route {
+    const params = new URLSearchParams(window.location.search)
+    // Viewport links predate the landing page and pointed at `/`; send them to the map.
+    if (window.location.pathname === '/' && params.has('cx') && params.has('cy') && params.has('z')) {
+        window.history.replaceState(null, '', `${COLLAGE_PATH}?${params}`)
+        return 'map'
+    }
+
+    return getRoute()
+}
+
 function App() {
-    const useShowcase = new URLSearchParams(window.location.search).get('demo') === 'showcase'
-    const [mapState, setMapState] = useState<{
-        definition: IIIFMapDefinition
-        manifestReady: boolean
-    } | null>(null)
+    const {mapState, preview, useShowcase} = useMapDefinition()
+    const [route, setRoute] = useState(resolveInitialRoute)
 
     useEffect(() => {
-        let cancelled = false
+        const handlePopState = () => setRoute(getRoute())
+        window.addEventListener('popstate', handlePopState)
 
-        const loadMap = useShowcase ? loadIIIFManifest : loadStressTestMap
-        loadMap()
-            .then((definition) => {
-                if (!cancelled) {
-                    setMapState({definition, manifestReady: true})
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setMapState({
-                        definition: {
-                            width: FALLBACK_MAP_SIZE,
-                            height: FALLBACK_MAP_SIZE,
-                            previewUrl: '/collage.webp',
-                            placements: fallbackCoordsList.map((coords, index) => ({
-                                ...coords,
-                                height: coords.width,
-                                id: `fallback-${index}`,
-                            })),
-                        },
-                        manifestReady: false,
-                    })
-                }
-            })
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [])
 
-        return () => {
-            cancelled = true
-        }
-    }, [useShowcase])
+    const collageHref = useShowcase ? `${COLLAGE_PATH}?demo=showcase` : COLLAGE_PATH
+
+    if (route === 'landing') {
+        return (
+            <Landing
+                preview={preview}
+                collageHref={collageHref}
+                onOpenCollage={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                        return
+                    }
+
+                    event.preventDefault()
+                    window.history.pushState(null, '', collageHref)
+                    setRoute('map')
+                }}
+            />
+        )
+    }
 
     if (!mapState) {
         return (
             <main className="tessera-app map-loading" aria-busy="true">
                 <picture>
-                    {!useShowcase ? <source type="image/avif" srcSet={STRESS_PREVIEW_AVIF_URL}/> : null}
-                    <img
-                        src={useShowcase ? '/collage.webp' : STRESS_PREVIEW_URL}
-                        alt="Preparing the Tessera collage map"
-                    />
+                    {preview.previewAvifUrl ? (
+                        <source type="image/avif" srcSet={preview.previewAvifUrl}/>
+                    ) : null}
+                    <img src={preview.previewUrl} alt="Preparing the Tessera collage map"/>
                 </picture>
             </main>
         )
