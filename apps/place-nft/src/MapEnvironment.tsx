@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react'
+import {useEffect, useRef, useState, type CSSProperties} from 'react'
 import {
     Mesh,
     OrthographicCamera,
@@ -10,6 +10,41 @@ import {
     WebGLRenderer,
 } from 'three'
 import './MapEnvironment.css'
+
+interface AtmosphereSettings {
+    reflection: number
+    frost: number
+    tint: number
+    depth: number
+}
+
+interface AtmosphereShader {
+    uniforms: {
+        uReflection: {value: number}
+        uFrost: {value: number}
+        uTint: {value: number}
+        uDepth: {value: number}
+    }
+    render: () => void
+}
+
+const STORAGE_KEY = 'tessera-atmosphere-settings'
+const DEFAULT_SETTINGS: AtmosphereSettings = {
+    reflection: 0.28,
+    frost: 0.16,
+    tint: 0.2,
+    depth: 0.26,
+}
+const CONTROLS: Array<{
+    key: keyof AtmosphereSettings
+    label: string
+    description: string
+}> = [
+    {key: 'reflection', label: 'Reflection', description: 'Strength of the soft glass highlight'},
+    {key: 'frost', label: 'Frost', description: 'Diffusion and surface texture'},
+    {key: 'tint', label: 'Cool tint', description: 'Blue-lavender color cast'},
+    {key: 'depth', label: 'Depth', description: 'Edge shading behind the canvas'},
+]
 
 const vertexShader = `
 varying vec2 vUv;
@@ -23,6 +58,10 @@ void main() {
 const fragmentShader = `
 uniform float uTime;
 uniform float uAspect;
+uniform float uReflection;
+uniform float uFrost;
+uniform float uTint;
+uniform float uDepth;
 uniform vec2 uPointer;
 varying vec2 vUv;
 
@@ -32,21 +71,32 @@ float random(vec2 position) {
 
 void main() {
     float drift = sin(uTime * 0.08) * 0.012;
+    float refraction = sin(vUv.x * 5.0 + uTime * 0.035)
+        * sin(vUv.y * 7.0 - uTime * 0.028)
+        * uFrost
+        * 0.006;
+    vec2 glassUv = vUv + vec2(refraction, refraction * 0.7);
     vec2 center = vec2(
         0.5 + uPointer.x * 0.025 + drift,
         0.46 - uPointer.y * 0.018
     );
-    vec2 distanceFromCenter = (vUv - center) * vec2(uAspect, 1.0);
+    vec2 distanceFromCenter = (glassUv - center) * vec2(uAspect, 1.0);
     float ambientLight = exp(-dot(distanceFromCenter, distanceFromCenter) * 0.34);
-    float verticalFade = smoothstep(0.0, 1.0, vUv.y);
-    float edgeShade = smoothstep(0.28, 0.82, length(distanceFromCenter));
+    float verticalFade = smoothstep(0.0, 1.0, glassUv.y);
+    float edgeShade = smoothstep(0.28, 0.86, length(distanceFromCenter));
 
     vec3 lowerColor = vec3(0.925, 0.945, 0.975);
     vec3 upperColor = vec3(0.992, 0.994, 1.0);
     vec3 color = mix(lowerColor, upperColor, verticalFade);
     color += ambientLight * vec3(0.022, 0.025, 0.038);
-    color -= edgeShade * vec3(0.012, 0.014, 0.018);
-    color += (random(gl_FragCoord.xy) - 0.5) / 255.0;
+    color -= edgeShade * uDepth * vec3(0.048, 0.052, 0.068);
+
+    float reflectionLine = glassUv.x * 0.72 + glassUv.y * 0.42;
+    float reflectionCenter = 0.68 + uPointer.x * 0.04 + sin(uTime * 0.045) * 0.016;
+    float sheen = exp(-pow((reflectionLine - reflectionCenter) * 2.25, 2.0));
+    color += sheen * uReflection * vec3(0.07, 0.075, 0.09);
+    color = mix(color, color * vec3(0.96, 0.985, 1.055), uTint * 0.55);
+    color += (random(gl_FragCoord.xy) - 0.5) * (0.002 + uFrost * 0.01);
 
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
@@ -55,6 +105,50 @@ void main() {
 
 export default function MapEnvironment() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
+    const shaderRef = useRef<AtmosphereShader | null>(null)
+    const [controlsOpen, setControlsOpen] = useState(false)
+    const [settings, setSettings] = useState<AtmosphereSettings>(() => {
+        try {
+            const stored = window.localStorage.getItem(STORAGE_KEY)
+            if (!stored) {
+                return DEFAULT_SETTINGS
+            }
+
+            const parsed = JSON.parse(stored) as Partial<AtmosphereSettings>
+            const savedValue = (key: keyof AtmosphereSettings) => {
+                const value = parsed[key]
+                return typeof value === 'number' && Number.isFinite(value)
+                    ? Math.max(0, Math.min(1, value))
+                    : DEFAULT_SETTINGS[key]
+            }
+            return {
+                reflection: savedValue('reflection'),
+                frost: savedValue('frost'),
+                tint: savedValue('tint'),
+                depth: savedValue('depth'),
+            }
+        } catch {
+            return DEFAULT_SETTINGS
+        }
+    })
+    const initialSettingsRef = useRef(settings)
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+        } catch {
+            // The live controls still work when storage is unavailable.
+        }
+
+        const shader = shaderRef.current
+        if (shader) {
+            shader.uniforms.uReflection.value = settings.reflection
+            shader.uniforms.uFrost.value = settings.frost
+            shader.uniforms.uTint.value = settings.tint
+            shader.uniforms.uDepth.value = settings.depth
+            shader.render()
+        }
+    }, [settings])
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -82,6 +176,10 @@ export default function MapEnvironment() {
             uTime: {value: 0},
             uAspect: {value: 1},
             uPointer: {value: new Vector2()},
+            uReflection: {value: initialSettingsRef.current.reflection},
+            uFrost: {value: initialSettingsRef.current.frost},
+            uTint: {value: initialSettingsRef.current.tint},
+            uDepth: {value: initialSettingsRef.current.depth},
         }
         const material = new ShaderMaterial({
             uniforms,
@@ -92,6 +190,11 @@ export default function MapEnvironment() {
         })
         const atmosphere = new Mesh(new PlaneGeometry(2, 2), material)
         scene.add(atmosphere)
+
+        shaderRef.current = {
+            uniforms,
+            render: () => renderer.render(scene, camera),
+        }
 
         const pointerTarget = new Vector2()
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -155,6 +258,7 @@ export default function MapEnvironment() {
             window.removeEventListener('pointermove', handlePointerMove)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             resizeObserver.disconnect()
+            shaderRef.current = null
             atmosphere.geometry.dispose()
             material.dispose()
             renderer.dispose()
@@ -162,9 +266,69 @@ export default function MapEnvironment() {
         }
     }, [])
 
+    const environmentStyle = {
+        '--atmosphere-reflection': settings.reflection,
+        '--atmosphere-frost': settings.frost,
+        '--atmosphere-tint': settings.tint,
+        '--atmosphere-depth': settings.depth,
+    } as CSSProperties
+
     return (
-        <div className="map-environment" aria-hidden="true">
-            <canvas ref={canvasRef} className="map-environment__canvas"/>
-        </div>
+        <>
+            <div className="map-environment" style={environmentStyle} aria-hidden="true">
+                <canvas ref={canvasRef} className="map-environment__canvas"/>
+            </div>
+            <div className={`atmosphere-controls ${controlsOpen ? 'atmosphere-controls--open' : ''}`}>
+                <button
+                    className="glass-surface atmosphere-toggle"
+                    type="button"
+                    aria-expanded={controlsOpen}
+                    aria-controls="atmosphere-panel"
+                    onClick={() => setControlsOpen((open) => !open)}
+                >
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <line x1="2" y1="4" x2="14" y2="4"/>
+                        <circle cx="6" cy="4" r="1.7"/>
+                        <line x1="2" y1="8" x2="14" y2="8"/>
+                        <circle cx="11" cy="8" r="1.7"/>
+                        <line x1="2" y1="12" x2="14" y2="12"/>
+                        <circle cx="8" cy="12" r="1.7"/>
+                    </svg>
+                    <span>Atmosphere</span>
+                </button>
+                {controlsOpen ? (
+                    <section id="atmosphere-panel" className="glass-surface atmosphere-panel" aria-label="Atmosphere controls">
+                        <div className="atmosphere-panel__heading">
+                            <div>
+                                <strong>Glass atmosphere</strong>
+                                <small>Saved on this device</small>
+                            </div>
+                            <button type="button" onClick={() => setSettings(DEFAULT_SETTINGS)}>Reset</button>
+                        </div>
+                        {CONTROLS.map((control) => (
+                            <label className="atmosphere-control" key={control.key}>
+                                <span>
+                                    <strong>{control.label}</strong>
+                                    <output>{Math.round(settings[control.key] * 100)}%</output>
+                                </span>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={Math.round(settings[control.key] * 100)}
+                                    aria-label={control.label}
+                                    onChange={(event) => {
+                                        const value = Number(event.currentTarget.value) / 100
+                                        setSettings((current) => ({...current, [control.key]: value}))
+                                    }}
+                                />
+                                <small>{control.description}</small>
+                            </label>
+                        ))}
+                    </section>
+                ) : null}
+            </div>
+        </>
     )
 }
