@@ -412,6 +412,40 @@
   stroke-linejoin: round;
 }
 
+.upload-moderation,
+.upload-moderation-note {
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 6px;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.upload-moderation--approved {
+  color: #1f7a4d;
+}
+
+.upload-moderation--blocked,
+.upload-moderation--error {
+  color: #a33b42;
+}
+
+.upload-moderation-spinner {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border: 2px solid rgba(91, 91, 214, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: moderation-spin 650ms linear infinite;
+}
+
 .primary-button {
   height: 42px;
   border: 0;
@@ -481,6 +515,10 @@
 @keyframes preview-in {
   from { opacity: 0; transform: scale(1.04); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes moderation-spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 639px) {

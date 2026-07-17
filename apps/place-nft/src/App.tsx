@@ -8,6 +8,7 @@ import {
 import IIIFImageLayer from './IIIFImageLayer.tsx'
 import type {IIIFMapDefinition} from './iiifManifest.ts'
 import {useMapDefinition} from './hooks/useMapDefinition.ts'
+import {moderateImage} from './imageModeration.ts'
 import Landing from './Landing.tsx'
 import Toolbar from './Toolbar.tsx'
 import {
@@ -29,6 +30,7 @@ const IIIF_ONLY_HIGH_RESOLUTION_ZOOM = 1.1
 const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
 
 type DetailLevel = 'preview' | 'medium' | 'images'
+type UploadModerationStatus = 'idle' | 'checking' | 'approved' | 'blocked' | 'error'
 
 interface Point {
     x: number
@@ -112,6 +114,7 @@ function TesseraMap({
     const minimapViewportRef = useRef<HTMLDivElement | null>(null)
     const selectionMarkerRef = useRef<HTMLDivElement | null>(null)
     const locationUpdateTimeoutRef = useRef<number | null>(null)
+    const moderationAbortRef = useRef<AbortController | null>(null)
     const activeTileIndexRef = useRef<number | null>(null)
     const [activeTileIndex, setActiveTileIndex] = useState<number | null>(null)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
@@ -124,6 +127,10 @@ function TesseraMap({
     const [uploadOpen, setUploadOpen] = useState(false)
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [uploadModeration, setUploadModeration] = useState<{
+        status: UploadModerationStatus
+        message: string
+    }>({status: 'idle', message: ''})
     const [uploads, setUploads] = useState<UploadedTile[]>([])
     const coordsList = mapDefinition.placements
 
@@ -250,6 +257,7 @@ function TesseraMap({
         if (locationUpdateTimeoutRef.current !== null) {
             window.clearTimeout(locationUpdateTimeoutRef.current)
         }
+        moderationAbortRef.current?.abort()
     }, [])
 
     const handleMapClick = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -271,6 +279,7 @@ function TesseraMap({
         if (picking) {
             setPickPoint(point)
             setPicking(false)
+            setUploadModeration({status: 'idle', message: ''})
             setUploadOpen(true)
             return
         }
@@ -522,17 +531,74 @@ function TesseraMap({
                 <UploadDialog
                     pickPoint={pickPoint}
                     previewUrl={previewUrl}
-                    onFile={(file) => {
-                        if (file) {
+                    moderation={uploadModeration}
+                    onFile={async (file) => {
+                        moderationAbortRef.current?.abort()
+                        setPreviewUrl((currentPreviewUrl) => {
+                            if (currentPreviewUrl) {
+                                URL.revokeObjectURL(currentPreviewUrl)
+                            }
+                            return null
+                        })
+
+                        if (!file) {
+                            setUploadModeration({status: 'idle', message: ''})
+                            return
+                        }
+
+                        const controller = new AbortController()
+                        moderationAbortRef.current = controller
+                        setUploadModeration({
+                            status: 'checking',
+                            message: 'Checking image for explicit content…',
+                        })
+
+                        try {
+                            const allowed = await moderateImage(file, controller.signal)
+                            if (controller.signal.aborted) {
+                                return
+                            }
+
+                            if (!allowed) {
+                                setUploadModeration({
+                                    status: 'blocked',
+                                    message: 'This image appears to contain explicit content. Choose a different image.',
+                                })
+                                return
+                            }
+
                             setPreviewUrl(URL.createObjectURL(file))
+                            setUploadModeration({
+                                status: 'approved',
+                                message: 'Image passed the safety check.',
+                            })
+                        } catch {
+                            if (!controller.signal.aborted) {
+                                setUploadModeration({
+                                    status: 'error',
+                                    message: 'We couldn’t verify this image. Try again before minting.',
+                                })
+                            }
+                        } finally {
+                            if (moderationAbortRef.current === controller) {
+                                moderationAbortRef.current = null
+                            }
                         }
                     }}
                     onCancel={() => {
+                        moderationAbortRef.current?.abort()
+                        moderationAbortRef.current = null
                         setUploadOpen(false)
-                        setPreviewUrl(null)
+                        setPreviewUrl((currentPreviewUrl) => {
+                            if (currentPreviewUrl) {
+                                URL.revokeObjectURL(currentPreviewUrl)
+                            }
+                            return null
+                        })
+                        setUploadModeration({status: 'idle', message: ''})
                     }}
                     onMint={() => {
-                        if (!previewUrl) {
+                        if (!previewUrl || uploadModeration.status !== 'approved') {
                             return
                         }
 
@@ -548,6 +614,7 @@ function TesseraMap({
                         ])
                         setUploadOpen(false)
                         setPreviewUrl(null)
+                        setUploadModeration({status: 'idle', message: ''})
                     }}
                 />
             ) : null}

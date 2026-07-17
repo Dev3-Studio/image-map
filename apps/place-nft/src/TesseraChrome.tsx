@@ -230,12 +230,17 @@ export function PickModeOverlay({onCancel}: {onCancel: () => void}) {
 export function UploadDialog({
     pickPoint,
     previewUrl,
+    moderation,
     onFile,
     onCancel,
     onMint,
 }: {
     pickPoint: Point
     previewUrl: string | null
+    moderation: {
+        status: 'idle' | 'checking' | 'approved' | 'blocked' | 'error'
+        message: string
+    }
     onFile: (file: File | null) => void
     onCancel: () => void
     onMint: () => void
@@ -243,7 +248,13 @@ export function UploadDialog({
     return (
         <div className="upload-layer" role="presentation">
             <div className="upload-backdrop"/>
-            <section className="glass-surface upload-dialog" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+            <section
+                className="glass-surface upload-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="upload-title"
+                aria-busy={moderation.status === 'checking'}
+            >
                 <div className="upload-heading">
                     <h2 id="upload-title">Add at {Math.round(pickPoint.x / 30)} · {Math.round(pickPoint.y / 30)}</h2>
                     <button className="round-button" type="button" aria-label="Close upload" onClick={onCancel}>
@@ -277,11 +288,35 @@ export function UploadDialog({
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={(event) => onFile(event.target.files?.[0] ?? null)}
+                        onChange={(event) => {
+                            onFile(event.target.files?.[0] ?? null)
+                            event.currentTarget.value = ''
+                        }}
                     />
                 </label>
-                <button className="primary-button" type="button" disabled={!previewUrl} onClick={onMint}>
-                    Mint to collage
+                {moderation.status !== 'idle' ? (
+                    <div
+                        className={`upload-moderation upload-moderation--${moderation.status}`}
+                        role="status"
+                        aria-live="polite"
+                    >
+                        {moderation.status === 'checking' ? (
+                            <span className="upload-moderation-spinner" aria-hidden="true"/>
+                        ) : null}
+                        <span>{moderation.message}</span>
+                    </div>
+                ) : (
+                    <div className="upload-moderation-note">
+                        Images are checked for explicit content before minting.
+                    </div>
+                )}
+                <button
+                    className="primary-button"
+                    type="button"
+                    disabled={!previewUrl || moderation.status !== 'approved'}
+                    onClick={onMint}
+                >
+                    {moderation.status === 'checking' ? 'Checking image…' : 'Mint to collage'}
                 </button>
             </section>
         </div>

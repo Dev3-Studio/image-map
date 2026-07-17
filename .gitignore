@@ -18,6 +18,9 @@ tools/*/target/
 # Local environment and tool output
 .env
 .env.local
+.env.*
+!.env.example
+!**/.env.example
 *.tsbuildinfo
 npm-debug.log*
 /Liquid glass image showcase/

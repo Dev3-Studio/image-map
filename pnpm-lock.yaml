@@ -11,6 +11,9 @@ importers:
       '@nx/vite':
         specifier: ^23.1.0
         version: 23.1.0(@babel/traverse@7.29.7)(nx@23.1.0)(typescript@6.0.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
       nx:
         specifier: ^23.1.0
         version: 23.1.0

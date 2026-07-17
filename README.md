@@ -44,6 +44,14 @@ pnpm nx -- run collage-maker:run
 pnpm nx -- synth collage-generation-infra
 ```
 
+## Upload moderation
+
+Images selected in the upload dialog are resized in the browser and sent to the server-only `/api/moderate-image` Vercel Function. The function uses OpenAI's `omni-moderation-latest` image classifier and only approves the preview when the sexual-content category is clear. Moderation failures are fail-closed, so an image cannot reach the mint action unless the check succeeds.
+
+Set `OPENAI_API_KEY` in the Vercel project's environment variables. Keep it server-only; never use a `VITE_` prefix or commit it to an environment file. Use `vercel dev` when testing the moderation function locally because the standalone Vite development server does not run files in `/api`.
+
+The current mint action is a local prototype and does not persist uploads. When permanent upload storage is added, the storage/finalize endpoint must repeat or cryptographically bind this server-side moderation decision before writing to R2; a browser approval alone is not an authorization boundary.
+
 ## Serverless collage releases
 
 The production path accepts an immutable snapshot from a trusted backend, queues it through DynamoDB and FIFO SQS, runs the Rust generator in Lambda, and atomically publishes a versioned release through S3 and CloudFront. See [the infrastructure guide](infra/collage-generation/README.md) for deployment, snapshot, API, and release contracts.
