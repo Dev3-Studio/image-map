@@ -462,6 +462,7 @@ function TesseraMap({
 
             {!picking && !uploadOpen ? (
                 <Minimap
+                    imageUrl={mapDefinition.previewUrl}
                     viewportRef={minimapViewportRef}
                     onNavigate={(event) => {
                         setGuidanceVisible(false)
