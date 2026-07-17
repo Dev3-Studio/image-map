@@ -185,7 +185,7 @@
 
 .minimap {
   position: fixed;
-  right: 18px;
+  left: 18px;
   bottom: 18px;
   z-index: 19;
   width: 148px;
@@ -485,7 +485,7 @@
   }
 
   .minimap {
-    right: 12px;
+    left: 12px;
     bottom: 86px;
     width: 84px;
     height: 84px;
