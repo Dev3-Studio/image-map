@@ -9,6 +9,7 @@
     position: absolute;
     display: block;
     max-width: none;
+    object-fit: cover;
     user-select: none;
     animation: reveal-iiif-tile 160ms ease-out both;
 }

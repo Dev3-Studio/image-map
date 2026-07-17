@@ -7,7 +7,7 @@ This repository combines the NFT collage app and the collage maker tool in one N
 - `apps/place-nft` - Vite NFT collage app
 - `tools/collage-maker` - Rust collage generator
 
-The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. It uses a memory-safe preview of the local real-image collage for the overview and deterministic seeded [Lorem Picsum](https://picsum.photos/) photographs for close-up tiles. The detail layer only requests images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
+The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its preview, IIIF Presentation manifest, and original JPEG leaf tiles are generated from the attached face and object images and published under the `tessera-5000-v1` prefix in R2. The app hydrates the placement geometry locally and only requests R2 images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
 
 ## Prerequisites
 
@@ -64,6 +64,12 @@ The committed showcase uses portable root-relative identifiers and can be regene
 
 ```powershell
 pnpm nx -- run collage-maker:publish-showcase
+```
+
+To regenerate the 5,000-image R2 staging publication from the untracked `Images` attachment:
+
+```powershell
+pnpm nx -- run collage-maker:publish-stress
 ```
 
 `publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, and `--jpeg-quality` to configure it. `--preview-output` and `--coords-output` keep the low-resolution map preview and navigation coordinates synchronized with the manifest.

@@ -3,6 +3,7 @@ node_modules/
 .nx/
 .idea/
 .playwright-cli/
+/Images/
 
 # Next.js
 apps/*/.next/

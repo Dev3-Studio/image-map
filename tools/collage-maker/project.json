@@ -73,6 +73,16 @@
         "command": "cargo run --locked -- publish-grid --images showcase --output ../../apps/place-nft/public/iiif --base-url /iiif --canvas-width 768 --columns 3 --tile-size 1024 --jpeg-quality 82 --preview-output ../../apps/place-nft/public/collage.webp --coords-output ../../apps/place-nft/src/assets/coords.json",
         "cwd": "tools/collage-maker"
       }
+    },
+    "publish-stress": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/output/r2-demo"
+      ],
+      "options": {
+        "command": "cargo run --release --locked -- publish-stress --images ../../Images --coords ../../apps/place-nft/public/coords4999.json --output output/r2-demo/iiif --preview-output output/r2-demo/collage.webp --base-url https://pub-78666f1dd7984ef69f57781fac523d68.r2.dev/tessera-5000-v1/iiif --canvas-width 12800 --coordinate-divisor 2 --preview-size 2048",
+        "cwd": "tools/collage-maker"
+      }
     }
   }
 }

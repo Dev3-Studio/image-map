@@ -48,14 +48,18 @@ export interface IIIFMapDefinition {
     placements: IIIFPlacement[]
 }
 
-let manifestPromise: Promise<IIIFMapDefinition> | null = null
+const manifestPromises = new Map<string, Promise<IIIFMapDefinition>>()
 
-export function loadIIIFManifest() {
-    if (manifestPromise) {
-        return manifestPromise
+export function loadIIIFManifest(
+    manifestUrl = '/iiif/manifest.json',
+    previewUrl = '/collage.webp',
+) {
+    const cachedManifest = manifestPromises.get(manifestUrl)
+    if (cachedManifest) {
+        return cachedManifest
     }
 
-    manifestPromise = fetch('/iiif/manifest.json')
+    const manifestPromise = fetch(manifestUrl)
         .then((response) => {
             if (!response.ok) {
                 throw new Error(`IIIF manifest request failed with ${response.status}`)
@@ -73,8 +77,9 @@ export function loadIIIFManifest() {
                     candidate.width > 0 &&
                     candidate.height > 0 &&
                     candidate.tiles?.[0]?.scaleFactors.length > 0)
+                const imageUrl = annotation.body.id
 
-                if (!match || !service) {
+                if (!match || (!service && !imageUrl)) {
                     return []
                 }
 
@@ -86,7 +91,7 @@ export function loadIIIFManifest() {
                     width: Number(rawWidth),
                     height: Number(rawHeight),
                     service,
-                    thumbnail: annotation.body.id,
+                    thumbnail: imageUrl,
                 }]
             })
 
@@ -97,14 +102,15 @@ export function loadIIIFManifest() {
             return {
                 width: canvas.width,
                 height: canvas.height,
-                previewUrl: '/collage.webp',
+                previewUrl,
                 placements,
             }
         })
         .catch((error) => {
-            manifestPromise = null
+            manifestPromises.delete(manifestUrl)
             throw error
         })
 
+    manifestPromises.set(manifestUrl, manifestPromise)
     return manifestPromise
 }

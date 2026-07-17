@@ -2,6 +2,7 @@ import {type IIIFMapDefinition, type IIIFPlacement} from './iiifManifest.ts'
 
 const FIXTURE_TILE_COUNT = 4_999
 const MAP_SIZE = 12_800
+const R2_DEMO_URL = 'https://pub-78666f1dd7984ef69f57781fac523d68.r2.dev/tessera-5000-v1'
 
 interface FixtureCoords {
     x: number
@@ -29,35 +30,31 @@ export function loadStressTestMap() {
                 throw new Error(`Expected ${FIXTURE_TILE_COUNT} stress-test coordinates`)
             }
 
-            const placements: IIIFPlacement[] = []
-            fixtureCoords.forEach((coords, fixtureIndex) => {
-                // The legacy fixture stores each edge at twice the size used by the 12,800px collage.
+            const placements: IIIFPlacement[] = fixtureCoords.map((coords, index) => {
                 const width = coords.width / 2
-                // Split one region into two photographs to turn the 4,999-leaf fixture into 5,000 tiles.
-                const placementCount = fixtureIndex === 0 ? 2 : 1
-
-                for (let part = 0; part < placementCount; part += 1) {
-                    const placementWidth = fixtureIndex === 0 ? width / 2 : width
-                    const placementHeight = width
-                    const index = placements.length
-                    const sourceWidth = Math.max(240, Math.min(900, Math.round(placementWidth * 1.5)))
-                    const sourceHeight = Math.max(240, Math.min(900, Math.round(placementHeight * 1.5)))
-
-                    placements.push({
-                        id: `stress-tile-${index}`,
-                        x: coords.x + part * placementWidth,
-                        y: coords.y,
-                        width: placementWidth,
-                        height: placementHeight,
-                        thumbnail: `https://picsum.photos/seed/tessera-${index}/${sourceWidth}/${sourceHeight}`,
-                    })
+                return {
+                    id: `stress-tile-${index}`,
+                    x: coords.x,
+                    y: coords.y,
+                    width,
+                    height: width,
+                    thumbnail: `${R2_DEMO_URL}/iiif/images/${index}.jpg`,
                 }
+            })
+            const first = placements[0]
+            placements.push({
+                id: `stress-tile-${FIXTURE_TILE_COUNT}`,
+                x: first.x,
+                y: first.y,
+                width: first.width / 2,
+                height: first.height / 2,
+                thumbnail: `${R2_DEMO_URL}/iiif/images/${FIXTURE_TILE_COUNT}.jpg`,
             })
 
             return {
                 width: MAP_SIZE,
                 height: MAP_SIZE,
-                previewUrl: '/collage-stress.webp',
+                previewUrl: `${R2_DEMO_URL}/collage.webp`,
                 placements,
             }
         })

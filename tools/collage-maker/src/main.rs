@@ -42,11 +42,21 @@ struct TileRequest {
 }
 
 fn image_paths(path: &Path) -> Vec<PathBuf> {
-    let mut paths: Vec<_> = std::fs::read_dir(path)
-        .unwrap_or_else(|error| panic!("could not read {}: {error}", path.display()))
-        .map(|entry| entry.unwrap().path())
-        .filter(|path| path.is_file())
-        .collect();
+    fn collect_paths(path: &Path, paths: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(path)
+            .unwrap_or_else(|error| panic!("could not read {}: {error}", path.display()))
+        {
+            let entry_path = entry.unwrap().path();
+            if entry_path.is_dir() {
+                collect_paths(&entry_path, paths);
+            } else if entry_path.is_file() {
+                paths.push(entry_path);
+            }
+        }
+    }
+
+    let mut paths = Vec::new();
+    collect_paths(path, &mut paths);
     paths.sort_unstable();
     paths
 }
@@ -147,6 +157,23 @@ fn save_subimages(
     }
 }
 
+fn save_webp(image: &ImageBuffer<Rgba<u8>, Vec<u8>>, path: &Path, quality: f32) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+
+    let mut config = WebPConfig::new().unwrap();
+    config.lossless = 0;
+    config.alpha_compression = 1;
+    config.quality = quality;
+    config.thread_level = 1;
+    let encoded = WebPEncoder::from_rgba(image.as_raw(), image.width(), image.height())
+        .encode_advanced(&config)
+        .expect("failed to encode WebP image");
+    let mut writer = File::create(path).unwrap();
+    writer.write_all(&encoded).unwrap();
+}
+
 fn square_crop(path: &Path) -> DynamicImage {
     let image = image::open(path)
         .unwrap_or_else(|error| panic!("could not decode {}: {error}", path.display()));
@@ -244,10 +271,7 @@ fn publish_image_service(
             let tile_path = service_path
                 .join(format!(
                     "{},{},{},{}",
-                    request.region_x,
-                    request.region_y,
-                    request.region_width,
-                    request.region_height
+                    request.region_x, request.region_y, request.region_width, request.region_height
                 ))
                 .join(format!(
                     "{},{}",
@@ -324,12 +348,9 @@ fn publish_iiif(placements: &[(PathBuf, ImageCoords)], publication: &IiifPublica
     let mut annotations = Vec::with_capacity(placements.len());
 
     for (index, (source_path, coords)) in placements.iter().enumerate() {
-        println!(
-            "Publishing IIIF image {}/{}: {}",
-            index + 1,
-            placements.len(),
-            source_path.display()
-        );
+        if index % 100 == 0 || index + 1 == placements.len() {
+            println!("Publishing IIIF image {}/{}", index + 1, placements.len());
+        }
         let service = publish_image_service(source_path, &index.to_string(), publication);
         let thumbnail_size = service["sizes"]
             .as_array()
@@ -406,7 +427,10 @@ fn run_publish_grid(args: &[String]) {
         .map(|value| value.parse().expect("--jpeg-quality must be an integer"))
         .unwrap_or(DEFAULT_IIIF_JPEG_QUALITY);
     let paths = image_paths(&images);
-    assert!(!paths.is_empty(), "--images must contain at least one image");
+    assert!(
+        !paths.is_empty(),
+        "--images must contain at least one image"
+    );
     assert!(columns > 0, "--columns must be greater than zero");
     let rows = (paths.len() as u32).div_ceil(columns);
     let cell_width = canvas_width / columns;
@@ -439,12 +463,7 @@ fn run_publish_grid(args: &[String]) {
                 coords.width,
                 image::imageops::FilterType::Lanczos3,
             );
-            image::imageops::replace(
-                &mut preview,
-                &image,
-                coords.x as i64,
-                coords.y as i64,
-            );
+            image::imageops::replace(&mut preview, &image, coords.x as i64, coords.y as i64);
         }
         DynamicImage::ImageRgba8(preview)
             .save_with_format(preview_output, ImageFormat::WebP)
@@ -475,19 +494,178 @@ fn run_publish_grid(args: &[String]) {
     );
 }
 
+fn run_publish_stress(args: &[String]) {
+    let images = PathBuf::from(
+        option_value(args, "--images").expect("publish-stress requires --images <directory>"),
+    );
+    let coords_path = PathBuf::from(
+        option_value(args, "--coords").expect("publish-stress requires --coords <file>"),
+    );
+    let output = PathBuf::from(
+        option_value(args, "--output").expect("publish-stress requires --output <directory>"),
+    );
+    let preview_output = PathBuf::from(
+        option_value(args, "--preview-output")
+            .expect("publish-stress requires --preview-output <file>"),
+    );
+    let public_base_url =
+        option_value(args, "--base-url").expect("publish-stress requires --base-url <url>");
+    let canvas_width: u32 = option_value(args, "--canvas-width")
+        .map(|value| value.parse().expect("--canvas-width must be an integer"))
+        .unwrap_or(12_800);
+    let coordinate_divisor: u32 = option_value(args, "--coordinate-divisor")
+        .map(|value| {
+            value
+                .parse()
+                .expect("--coordinate-divisor must be an integer")
+        })
+        .unwrap_or(2);
+    let preview_size: u32 = option_value(args, "--preview-size")
+        .map(|value| value.parse().expect("--preview-size must be an integer"))
+        .unwrap_or(2048);
+    assert!(
+        coordinate_divisor > 0,
+        "--coordinate-divisor must be greater than zero"
+    );
+    assert!(preview_size > 0, "--preview-size must be greater than zero");
+
+    let paths = image_paths(&images);
+    let reader = BufReader::new(
+        File::open(&coords_path)
+            .unwrap_or_else(|error| panic!("could not read {}: {error}", coords_path.display())),
+    );
+    let coords: Vec<ImageCoords> = serde_json::from_reader(reader)
+        .unwrap_or_else(|error| panic!("could not parse {}: {error}", coords_path.display()));
+    assert_eq!(
+        paths.len(),
+        coords.len() + 1,
+        "publish-stress expects exactly one more image than coordinate"
+    );
+
+    let normalized_coords: Vec<_> = coords
+        .into_iter()
+        .map(|coords| ImageCoords {
+            x: coords.x,
+            y: coords.y,
+            width: coords.width / coordinate_divisor,
+        })
+        .collect();
+    assert!(
+        normalized_coords.iter().all(|coords| coords.width > 0
+            && coords.x + coords.width <= canvas_width
+            && coords.y + coords.width <= canvas_width),
+        "normalized coordinates must fit inside the square canvas"
+    );
+
+    let mut placements: Vec<_> = paths
+        .iter()
+        .take(normalized_coords.len())
+        .cloned()
+        .zip(normalized_coords.iter().cloned())
+        .collect();
+    let first = normalized_coords
+        .first()
+        .expect("coordinates cannot be empty");
+    placements.push((
+        paths.last().unwrap().clone(),
+        ImageCoords {
+            x: first.x,
+            y: first.y,
+            width: first.width / 2,
+        },
+    ));
+
+    println!(
+        "Rendering {} attached images into a {preview_size}px preview",
+        placements.len()
+    );
+    let mut preview: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(preview_size, preview_size);
+    for (index, (source_path, coords)) in placements.iter().enumerate() {
+        if index % 500 == 0 || index + 1 == placements.len() {
+            println!("Rendering preview image {}/{}", index + 1, placements.len());
+        }
+        let preview_x = u64::from(coords.x) * u64::from(preview_size) / u64::from(canvas_width);
+        let preview_y = u64::from(coords.y) * u64::from(preview_size) / u64::from(canvas_width);
+        let preview_width = (u64::from(coords.width) * u64::from(preview_size)
+            / u64::from(canvas_width))
+        .max(1) as u32;
+        let image = square_crop(source_path).resize_exact(
+            preview_width,
+            preview_width,
+            image::imageops::FilterType::Lanczos3,
+        );
+        image::imageops::replace(&mut preview, &image, preview_x as i64, preview_y as i64);
+    }
+    save_webp(&preview, &preview_output, 78.0);
+
+    if output.exists() {
+        std::fs::remove_dir_all(&output).unwrap();
+    }
+    let images_output = output.join("images");
+    std::fs::create_dir_all(&images_output).unwrap();
+    let base_url = public_base_url.trim_end_matches('/');
+    let canvas_id = format!("{base_url}/canvas");
+    let mut annotations = Vec::with_capacity(placements.len());
+    for (index, (source_path, coords)) in placements.iter().enumerate() {
+        if index % 500 == 0 || index + 1 == placements.len() {
+            println!(
+                "Publishing original image {}/{}",
+                index + 1,
+                placements.len()
+            );
+        }
+        let image_name = format!("{index}.jpg");
+        std::fs::copy(source_path, images_output.join(&image_name))
+            .unwrap_or_else(|error| panic!("could not copy {}: {error}", source_path.display()));
+        let (source_width, source_height) = image::image_dimensions(source_path)
+            .unwrap_or_else(|error| panic!("could not inspect {}: {error}", source_path.display()));
+        let image_url = format!("{base_url}/images/{image_name}");
+        annotations.push(json!({
+            "id": format!("{base_url}/annotation/{index}"),
+            "type": "Annotation",
+            "motivation": "painting",
+            "target": format!(
+                "{canvas_id}#xywh={},{},{},{}",
+                coords.x, coords.y, coords.width, coords.width
+            ),
+            "body": {
+                "id": image_url,
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": source_width,
+                "height": source_height,
+            },
+        }));
+    }
+
+    let manifest = json!({
+        "@context": "http://iiif.io/api/presentation/3/context.json",
+        "id": format!("{base_url}/manifest.json"),
+        "type": "Manifest",
+        "label": {"en": ["Tessera 5,000 image stress demo"]},
+        "items": [{
+            "id": canvas_id,
+            "type": "Canvas",
+            "width": canvas_width,
+            "height": canvas_width,
+            "items": [{
+                "id": format!("{base_url}/page"),
+                "type": "AnnotationPage",
+                "items": annotations,
+            }],
+        }],
+    });
+    let writer = File::create(output.join("manifest.json")).unwrap();
+    serde_json::to_writer_pretty(writer, &manifest).unwrap();
+}
+
 fn parse_json(path: &Path) -> Value {
     let reader = BufReader::new(File::open(path).unwrap());
     serde_json::from_reader(reader).expect("JSON was not well-formatted")
 }
 
 fn traverse_json(json: &Value, arr: &mut Vec<i32>, path_arr: &mut Vec<Vec<i32>>) {
-    traverse_json_rec(
-        json.as_object().unwrap(),
-        0,
-        arr,
-        path_arr,
-        &mut Vec::new(),
-    );
+    traverse_json_rec(json.as_object().unwrap(), 0, arr, path_arr, &mut Vec::new());
 }
 
 fn traverse_json_rec(
@@ -587,10 +765,10 @@ fn run_collage() {
 
 fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
-    if args.first().map(String::as_str) == Some("publish-grid") {
-        run_publish_grid(&args[1..]);
-    } else {
-        run_collage();
+    match args.first().map(String::as_str) {
+        Some("publish-grid") => run_publish_grid(&args[1..]),
+        Some("publish-stress") => run_publish_stress(&args[1..]),
+        _ => run_collage(),
     }
 }
 
