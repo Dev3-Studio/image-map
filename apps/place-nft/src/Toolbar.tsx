@@ -48,7 +48,7 @@ function Toolbar({
             </button>
             <span className="toolbar-divider"/>
             <button
-                className={`upload-button ${demoMode ? 'upload-button--demo' : ''}`}
+                className="upload-button"
                 type="button"
                 aria-label={demoMode ? 'Add a demo image' : 'Add your image'}
                 title={demoMode ? 'Add a demo image — no wallet required' : 'Add your image'}
@@ -59,7 +59,6 @@ function Toolbar({
                     <path d="M3.8 5.2 7 2l3.2 3.2"/>
                     <path d="M2 11.5h10"/>
                 </svg>
-                {demoMode ? <span className="upload-button-label">Add image</span> : null}
             </button>
         </div>
     )

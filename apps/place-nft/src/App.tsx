@@ -130,7 +130,6 @@ function TesseraMap({
     const [mediumPreviewRequested, setMediumPreviewRequested] = useState(false)
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
-    const [demoUploadPromptVisible, setDemoUploadPromptVisible] = useState(demoMode)
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [uploadModeration, setUploadModeration] = useState<{
@@ -474,7 +473,6 @@ function TesseraMap({
                             zoomLabelRef={zoomLabelRef}
                             demoMode={demoMode}
                             onStartPick={() => {
-                                setDemoUploadPromptVisible(false)
                                 setPicking(true)
                                 setSelectedImageIndex(null)
                             }}
@@ -488,38 +486,6 @@ function TesseraMap({
                     Drag to explore <span aria-hidden="true">·</span>{' '}
                     {usesTouchGestures ? 'Pinch' : 'Scroll'} to zoom
                 </div>
-            ) : null}
-
-            {demoMode && demoUploadPromptVisible && !picking && !uploadOpen ? (
-                <section className="glass-surface demo-upload-prompt" aria-label="Demo upload">
-                    <button
-                        className="demo-upload-prompt__close"
-                        type="button"
-                        aria-label="Dismiss demo upload prompt"
-                        onClick={() => setDemoUploadPromptVisible(false)}
-                    >
-                        <svg width="9" height="9" viewBox="0 0 11 11" aria-hidden="true">
-                            <line x1="1.5" y1="1.5" x2="9.5" y2="9.5"/>
-                            <line x1="9.5" y1="1.5" x2="1.5" y2="9.5"/>
-                        </svg>
-                    </button>
-                    <div className="demo-upload-prompt__copy">
-                        <span>Demo · no wallet needed</span>
-                        <strong>See your image on the canvas</strong>
-                        <p>Choose a spot, upload an image, and place it instantly.</p>
-                    </div>
-                    <button
-                        className="demo-upload-prompt__action"
-                        type="button"
-                        onClick={() => {
-                            setDemoUploadPromptVisible(false)
-                            setPicking(true)
-                            setSelectedImageIndex(null)
-                        }}
-                    >
-                        Add an image
-                    </button>
-                </section>
             ) : null}
 
             {activeTileIndex !== null && !picking && !uploadOpen ? (

@@ -58,24 +58,6 @@
   filter: brightness(0.9);
 }
 
-#toolbar .upload-button--demo {
-  display: flex;
-  width: auto;
-  gap: 7px;
-  padding: 0 14px;
-}
-
-#toolbar .upload-button--demo:hover {
-  transform: translateY(-1px) scale(1.03);
-}
-
-.upload-button-label {
-  font-size: 12px;
-  font-weight: 750;
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .zoom-label {
   position: relative;
   z-index: 1;
