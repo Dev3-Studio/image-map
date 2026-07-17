@@ -197,6 +197,8 @@
   border-radius: 18px;
   background: #e7e9ef;
   box-shadow: 0 16px 48px rgba(20, 32, 55, 0.3);
+  cursor: grab;
+  touch-action: none;
   transition: transform 300ms var(--spring);
 }
 
@@ -206,6 +208,14 @@
 
 .minimap:active {
   transform: scale(0.97);
+}
+
+.minimap--dragging,
+.minimap--dragging:hover,
+.minimap--dragging:active {
+  cursor: grabbing;
+  transform: scale(1.02);
+  transition-duration: 80ms;
 }
 
 .minimap-image {

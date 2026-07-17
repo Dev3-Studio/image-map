@@ -1,4 +1,4 @@
-import {useMemo, useState, type DragEvent, type MouseEvent, type RefObject} from 'react'
+import {useMemo, useState, type DragEvent, type PointerEvent, type RefObject} from 'react'
 import './TesseraChrome.css'
 
 interface Point {
@@ -160,17 +160,59 @@ export function Minimap({
     imageUrl: string
     imageAvifUrl?: string
     viewportRef: RefObject<HTMLDivElement | null>
-    onNavigate: (event: MouseEvent<HTMLButtonElement>) => void
+    onNavigate: (xRatio: number, yRatio: number) => void
 }) {
+    const [dragging, setDragging] = useState(false)
+    const navigateToPointer = (event: PointerEvent<HTMLButtonElement>) => {
+        const bounds = event.currentTarget.getBoundingClientRect()
+        onNavigate(
+            Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
+            Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)),
+        )
+    }
+
     return (
-        <button className="minimap" type="button" title="Minimap" onClick={onNavigate}>
+        <button
+            className={`minimap ${dragging ? 'minimap--dragging' : ''}`}
+            type="button"
+            title="Drag to navigate the minimap"
+            onClick={(event) => {
+                if (event.detail === 0) {
+                    onNavigate(0.5, 0.5)
+                }
+            }}
+            onPointerDown={(event) => {
+                if (event.button !== 0) {
+                    return
+                }
+
+                event.preventDefault()
+                event.currentTarget.setPointerCapture(event.pointerId)
+                setDragging(true)
+                navigateToPointer(event)
+            }}
+            onPointerMove={(event) => {
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    navigateToPointer(event)
+                }
+            }}
+            onPointerUp={(event) => {
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    navigateToPointer(event)
+                    event.currentTarget.releasePointerCapture(event.pointerId)
+                }
+                setDragging(false)
+            }}
+            onPointerCancel={() => setDragging(false)}
+            onLostPointerCapture={() => setDragging(false)}
+        >
             <picture>
                 {imageAvifUrl ? <source type="image/avif" srcSet={imageAvifUrl}/> : null}
                 <img className="minimap-image" src={imageUrl} alt="" aria-hidden={true} draggable={false}/>
             </picture>
             <span className="minimap-wash" aria-hidden="true"/>
             <span ref={viewportRef} className="minimap-viewport" aria-hidden="true"/>
-            <span className="sr-only">Navigate the collage minimap</span>
+            <span className="sr-only">Drag to navigate the collage minimap</span>
         </button>
     )
 }

@@ -473,23 +473,21 @@ function TesseraMap({
                     imageUrl={mapDefinition.previewUrl}
                     imageAvifUrl={mapDefinition.previewAvifUrl}
                     viewportRef={minimapViewportRef}
-                    onNavigate={(event) => {
+                    onNavigate={(xRatio, yRatio) => {
                         setGuidanceVisible(false)
                         const transform = transformRef.current
                         if (!transform) {
                             return
                         }
 
-                        const bounds = event.currentTarget.getBoundingClientRect()
-                        const x = ((event.clientX - bounds.left) / bounds.width) * mapDefinition.width
-                        const y = ((event.clientY - bounds.top) / bounds.height) * mapDefinition.height
+                        const x = xRatio * mapDefinition.width
+                        const y = yRatio * mapDefinition.height
                         const scale = transform.state.scale
                         transform.setTransform(
                             window.innerWidth / 2 - x * scale,
                             window.innerHeight / 2 - y * scale,
                             scale,
-                            420,
-                            'easeOut',
+                            0,
                         )
                     }}
                 />
