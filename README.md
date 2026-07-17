@@ -74,7 +74,7 @@ To regenerate the 5,000-image R2 staging publication from the untracked `Images`
 pnpm nx -- run collage-maker:publish-stress
 ```
 
-The stress publisher writes AVIF and WebP variants for both previews and every leaf image. Encoding uses high visual-quality settings and sizes each leaf at four source pixels per map pixel, clamped between 384px and 2,048px without upscaling past the attached source. Set `STRESS_ENCODER_JOBS` from 1 to 8 to control parallel AVIF/WebP encoding according to available memory.
+The stress publisher writes AVIF and WebP variants for both previews and every leaf image. Encoding uses high visual-quality settings and preserves four source pixels per map pixel, with a 384px floor for small placements and no fixed upper resolution cap. Output never upscales past the uploaded source, so larger high-resolution uploads retain proportionally more detail without changing the established density of small images. Set `STRESS_ENCODER_JOBS` from 1 to 8 to control parallel AVIF/WebP encoding according to available memory.
 
 `publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, and `--jpeg-quality` to configure it. `--preview-output` and `--coords-output` keep the low-resolution map preview and navigation coordinates synchronized with the manifest.
 

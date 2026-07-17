@@ -22,7 +22,6 @@ const STRESS_AVIF_QUALITY: u8 = 75;
 const STRESS_AVIF_SPEED: u8 = 8;
 const LEAF_PIXELS_PER_MAP_PIXEL: u32 = 4;
 const MIN_LEAF_EDGE: u32 = 384;
-const MAX_LEAF_EDGE: u32 = 2048;
 
 #[derive(Clone, Deserialize, Serialize)]
 struct ImageCoords {
@@ -704,7 +703,7 @@ fn run_publish_stress(args: &[String]) {
                 let desired_edge = coords
                     .width
                     .saturating_mul(LEAF_PIXELS_PER_MAP_PIXEL)
-                    .clamp(MIN_LEAF_EDGE, MAX_LEAF_EDGE);
+                    .max(MIN_LEAF_EDGE);
                 let output_edge = desired_edge.min(source.width());
                 let optimized = if output_edge == source.width() {
                     source
