@@ -1,11 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/moderate-image.ts": {
-      "maxDuration": 10,
-      "supportsCancellation": true
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
