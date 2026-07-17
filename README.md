@@ -7,7 +7,7 @@ This repository combines the NFT collage app and the collage maker tool in one N
 - `apps/place-nft` - Vite NFT collage app
 - `tools/collage-maker` - Rust collage generator
 
-The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its preview, IIIF Presentation manifest, and original JPEG leaf tiles are generated from the attached face and object images and published under the `tessera-5000-v1` prefix in R2. The app hydrates the placement geometry locally and only requests R2 images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
+The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its 2,048px overview, 6,400px medium LOD, IIIF Presentation manifest, and original JPEG leaf tiles are generated from the attached face and object images and published under the `tessera-5000-v1` prefix in R2. The app hydrates the placement geometry locally and only requests R2 images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
 
 ## Prerequisites
 

@@ -80,7 +80,7 @@
         "{projectRoot}/output/r2-demo"
       ],
       "options": {
-        "command": "cargo run --release --locked -- publish-stress --images ../../Images --coords ../../apps/place-nft/public/coords4999.json --output output/r2-demo/iiif --preview-output output/r2-demo/collage.webp --base-url https://pub-78666f1dd7984ef69f57781fac523d68.r2.dev/tessera-5000-v1/iiif --canvas-width 12800 --coordinate-divisor 2 --preview-size 2048",
+        "command": "cargo run --release --locked -- publish-stress --images ../../Images --coords ../../apps/place-nft/public/coords4999.json --output output/r2-demo/iiif --preview-output output/r2-demo/collage.webp --preview-size 2048 --medium-preview-output output/r2-demo/collage-medium.webp --medium-preview-size 6400 --base-url https://pub-78666f1dd7984ef69f57781fac523d68.r2.dev/tessera-5000-v1/iiif --canvas-width 12800 --coordinate-divisor 2",
         "cwd": "tools/collage-maker"
       }
     }

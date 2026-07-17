@@ -55,6 +55,7 @@ export function loadStressTestMap() {
                 width: MAP_SIZE,
                 height: MAP_SIZE,
                 previewUrl: `${R2_DEMO_URL}/collage.webp`,
+                mediumPreviewUrl: `${R2_DEMO_URL}/collage-medium.webp`,
                 placements,
             }
         })

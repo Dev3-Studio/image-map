@@ -174,6 +174,36 @@ fn save_webp(image: &ImageBuffer<Rgba<u8>, Vec<u8>>, path: &Path, quality: f32) 
     writer.write_all(&encoded).unwrap();
 }
 
+fn render_preview(
+    placements: &[(PathBuf, ImageCoords)],
+    canvas_width: u32,
+    preview_size: u32,
+    preview_output: &Path,
+) {
+    println!(
+        "Rendering {} attached images into a {preview_size}px preview",
+        placements.len()
+    );
+    let mut preview: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(preview_size, preview_size);
+    for (index, (source_path, coords)) in placements.iter().enumerate() {
+        if index % 500 == 0 || index + 1 == placements.len() {
+            println!("Rendering preview image {}/{}", index + 1, placements.len());
+        }
+        let preview_x = u64::from(coords.x) * u64::from(preview_size) / u64::from(canvas_width);
+        let preview_y = u64::from(coords.y) * u64::from(preview_size) / u64::from(canvas_width);
+        let preview_width = (u64::from(coords.width) * u64::from(preview_size)
+            / u64::from(canvas_width))
+        .max(1) as u32;
+        let image = square_crop(source_path).resize_exact(
+            preview_width,
+            preview_width,
+            image::imageops::FilterType::Lanczos3,
+        );
+        image::imageops::replace(&mut preview, &image, preview_x as i64, preview_y as i64);
+    }
+    save_webp(&preview, preview_output, 78.0);
+}
+
 fn square_crop(path: &Path) -> DynamicImage {
     let image = image::open(path)
         .unwrap_or_else(|error| panic!("could not decode {}: {error}", path.display()));
@@ -508,6 +538,10 @@ fn run_publish_stress(args: &[String]) {
         option_value(args, "--preview-output")
             .expect("publish-stress requires --preview-output <file>"),
     );
+    let medium_preview_output = PathBuf::from(
+        option_value(args, "--medium-preview-output")
+            .expect("publish-stress requires --medium-preview-output <file>"),
+    );
     let public_base_url =
         option_value(args, "--base-url").expect("publish-stress requires --base-url <url>");
     let canvas_width: u32 = option_value(args, "--canvas-width")
@@ -523,11 +557,22 @@ fn run_publish_stress(args: &[String]) {
     let preview_size: u32 = option_value(args, "--preview-size")
         .map(|value| value.parse().expect("--preview-size must be an integer"))
         .unwrap_or(2048);
+    let medium_preview_size: u32 = option_value(args, "--medium-preview-size")
+        .map(|value| {
+            value
+                .parse()
+                .expect("--medium-preview-size must be an integer")
+        })
+        .unwrap_or(6400);
     assert!(
         coordinate_divisor > 0,
         "--coordinate-divisor must be greater than zero"
     );
     assert!(preview_size > 0, "--preview-size must be greater than zero");
+    assert!(
+        medium_preview_size > preview_size,
+        "--medium-preview-size must be larger than --preview-size"
+    );
 
     let paths = image_paths(&images);
     let reader = BufReader::new(
@@ -575,28 +620,13 @@ fn run_publish_stress(args: &[String]) {
         },
     ));
 
-    println!(
-        "Rendering {} attached images into a {preview_size}px preview",
-        placements.len()
+    render_preview(&placements, canvas_width, preview_size, &preview_output);
+    render_preview(
+        &placements,
+        canvas_width,
+        medium_preview_size,
+        &medium_preview_output,
     );
-    let mut preview: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(preview_size, preview_size);
-    for (index, (source_path, coords)) in placements.iter().enumerate() {
-        if index % 500 == 0 || index + 1 == placements.len() {
-            println!("Rendering preview image {}/{}", index + 1, placements.len());
-        }
-        let preview_x = u64::from(coords.x) * u64::from(preview_size) / u64::from(canvas_width);
-        let preview_y = u64::from(coords.y) * u64::from(preview_size) / u64::from(canvas_width);
-        let preview_width = (u64::from(coords.width) * u64::from(preview_size)
-            / u64::from(canvas_width))
-        .max(1) as u32;
-        let image = square_crop(source_path).resize_exact(
-            preview_width,
-            preview_width,
-            image::imageops::FilterType::Lanczos3,
-        );
-        image::imageops::replace(&mut preview, &image, preview_x as i64, preview_y as i64);
-    }
-    save_webp(&preview, &preview_output, 78.0);
 
     if output.exists() {
         std::fs::remove_dir_all(&output).unwrap();

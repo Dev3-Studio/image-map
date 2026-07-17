@@ -21,10 +21,12 @@ import {
 const FALLBACK_MAP_SIZE = 768
 const MIN_SCALE = 0.04
 const MAX_SCALE = 8
-const HIGH_RESOLUTION_ZOOM = 1.1
+const MEDIUM_RESOLUTION_ZOOM = 0.14
+const MEDIUM_TO_IMAGE_ZOOM = 0.46
+const IIIF_ONLY_HIGH_RESOLUTION_ZOOM = 1.1
 const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
 
-type DetailLevel = 'preview' | 'iiif'
+type DetailLevel = 'preview' | 'medium' | 'images'
 
 interface Point {
     x: number
@@ -321,9 +323,14 @@ function TesseraMap({
                     onTransform={(ref) => {
                         const {positionX, positionY, scale} = ref.state
                         positionSelectionMarker(ref.state)
-                        const nextDetailLevel = scale >= HIGH_RESOLUTION_ZOOM
-                            ? 'iiif'
-                            : 'preview'
+                        const highResolutionZoom = mapDefinition.mediumPreviewUrl
+                            ? MEDIUM_TO_IMAGE_ZOOM
+                            : IIIF_ONLY_HIGH_RESOLUTION_ZOOM
+                        const nextDetailLevel = scale >= highResolutionZoom
+                            ? 'images'
+                            : mapDefinition.mediumPreviewUrl && scale >= MEDIUM_RESOLUTION_ZOOM
+                                ? 'medium'
+                                : 'preview'
 
                         setDetailLevel((currentDetailLevel) =>
                             currentDetailLevel === nextDetailLevel
@@ -365,6 +372,7 @@ function TesseraMap({
                     <TransformComponent wrapperClass="transformWrapper" contentClass="transformComponent">
                         <picture
                             className="collage-picture"
+                            data-lod={detailLevel}
                             style={{width: mapDefinition.width, height: mapDefinition.height}}
                         >
                             <img
@@ -376,8 +384,19 @@ function TesseraMap({
                                 style={{width: mapDefinition.width, height: mapDefinition.height}}
                             />
                         </picture>
+                        {mapDefinition.mediumPreviewUrl ? (
+                            <img
+                                className={`collage-medium ${detailLevel !== 'preview' ? 'collage-medium--visible' : ''}`}
+                                src={mapDefinition.mediumPreviewUrl}
+                                alt=""
+                                aria-hidden={true}
+                                decoding="async"
+                                draggable={false}
+                                style={{width: mapDefinition.width, height: mapDefinition.height}}
+                            />
+                        ) : null}
                         <IIIFImageLayer
-                            visible={detailLevel === 'iiif'}
+                            visible={detailLevel === 'images'}
                             placements={mapDefinition.placements}
                             manifestReady={manifestReady}
                         />

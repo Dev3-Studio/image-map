@@ -40,9 +40,25 @@
 }
 
 .collage-picture {
+  position: relative;
+  z-index: 0;
   display: block;
   width: 768px;
   height: 768px;
+}
+
+.collage-medium {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  max-width: none;
+  visibility: hidden;
+  user-select: none;
+}
+
+.collage-medium--visible {
+  visibility: visible;
 }
 
 .map .transformWrapper {

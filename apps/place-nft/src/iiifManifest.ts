@@ -45,6 +45,7 @@ export interface IIIFMapDefinition {
     width: number
     height: number
     previewUrl: string
+    mediumPreviewUrl?: string
     placements: IIIFPlacement[]
 }
 

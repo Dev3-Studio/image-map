@@ -3,7 +3,7 @@ import {useTransformContext} from 'react-zoom-pan-pinch'
 import {type IIIFPlacement} from './iiifManifest.ts'
 import './IIIFImageLayer.css'
 
-const PRELOAD_MARGIN = 384
+const PRELOAD_MARGIN = 160
 
 interface RenderedTile {
     id: string
