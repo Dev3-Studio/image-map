@@ -231,8 +231,6 @@ export function PickModeOverlay({onCancel}: {onCancel: () => void}) {
     )
 }
 
-const MIN_CROP_EDGE = 960
-
 interface CropSource {
     file: File
     url: string
@@ -285,7 +283,6 @@ function SquareCropEditor({
     const [processing, setProcessing] = useState(false)
     const [cropError, setCropError] = useState<string | null>(null)
     const shortestEdge = Math.min(imageSize.width, imageSize.height)
-    const maxZoom = Math.max(1, Math.min(3, shortestEdge / MIN_CROP_EDGE))
     const cropSize = shortestEdge > 0 ? shortestEdge / selection.zoom : 1
     const imageStyle = imageSize.width > 0 ? {
         width: `${imageSize.width / cropSize * 100}%`,
@@ -293,7 +290,7 @@ function SquareCropEditor({
         left: `${50 - selection.centerX * imageSize.width / cropSize * 100}%`,
         top: `${50 - selection.centerY * imageSize.height / cropSize * 100}%`,
     } : undefined
-    const canApply = shortestEdge >= MIN_CROP_EDGE && !processing && moderationStatus !== 'checking'
+    const canApply = imageSize.width > 0 && !processing && moderationStatus !== 'checking'
 
     useEffect(() => {
         activeRef.current = true
@@ -411,10 +408,10 @@ function SquareCropEditor({
                     <input
                         type="range"
                         min="1"
-                        max={maxZoom}
+                        max="3"
                         step="0.01"
-                        value={Math.min(selection.zoom, maxZoom)}
-                        disabled={shortestEdge < MIN_CROP_EDGE}
+                        value={selection.zoom}
+                        disabled={!imageSize.width}
                         onChange={(event) => updateZoom(Number(event.currentTarget.value))}
                     />
                 </label>
@@ -430,11 +427,7 @@ function SquareCropEditor({
                     Reset
                 </button>
             </div>
-            {shortestEdge > 0 && shortestEdge < MIN_CROP_EDGE ? (
-                <div className="crop-error" role="alert">
-                    Choose an image at least {MIN_CROP_EDGE} px on its shortest side.
-                </div>
-            ) : cropError ? <div className="crop-error" role="alert">{cropError}</div> : null}
+            {cropError ? <div className="crop-error" role="alert">{cropError}</div> : null}
             <div className="crop-actions">
                 <label className="secondary-button crop-replace">
                     Choose another
@@ -567,7 +560,7 @@ export function UploadDialog({
                             <path d="M2 11.5h10"/>
                         </svg>
                         <span>Drop an image, or browse</span>
-                        <small>Crop to square · min 960 × 960</small>
+                        <small>Any dimensions · crop after upload</small>
                         <input
                             type="file"
                             accept="image/*"

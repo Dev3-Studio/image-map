@@ -5,7 +5,7 @@ import './Landing.css'
 const STATS = [
     {value: '10,000', label: 'Tiles on the canvas'},
     {value: '7,680 px', label: 'Full canvas width'},
-    {value: '960 px', label: 'Minimum image size'},
+    {value: 'Any size', label: 'Accepted uploads'},
     {value: '1 of 1', label: 'Each tile, forever'},
 ]
 
@@ -20,7 +20,7 @@ const FAQS = [
     },
     {
         q: 'What image formats work?',
-        a: 'Any common format — JPG, PNG, or WebP. Images should be square and at least 960 × 960 pixels so they stay sharp at full zoom.',
+        a: 'Any common format — JPG, PNG, or WebP. The crop editor lets you frame any image as a square before it is placed.',
     },
     {
         q: 'Do I need a wallet to explore?',
@@ -135,8 +135,8 @@ export default function Landing({
                         <div className="landing-step-index">STEP 2</div>
                         <h3>Upload your image</h3>
                         <p>
-                            Drop in any square image, 960 × 960 or larger. It’s cropped to your tile exactly as you
-                            preview it — what you see is what gets placed.
+                            Drop in an image of any size, then drag and zoom the square crop. What you preview is
+                            exactly what gets placed.
                         </p>
                     </article>
                     <article className="glass-surface landing-step">
