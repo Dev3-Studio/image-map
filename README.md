@@ -7,6 +7,8 @@ This repository combines the NFT collage app and the collage maker tool in one N
 - `apps/place-nft` - Vite NFT collage app
 - `tools/collage-maker` - Rust collage generator
 
+The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. It uses a memory-safe preview of the local real-image collage for the overview and deterministic seeded [Lorem Picsum](https://picsum.photos/) photographs for close-up tiles. The detail layer only requests images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
+
 ## Prerequisites
 
 - Node.js 24.5 (see `.nvmrc`) and pnpm 11.10

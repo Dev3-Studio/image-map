@@ -70,8 +70,18 @@ function IIIFImageLayer({
                         return
                     }
 
-                    const {service} = placement
+                    const {service, thumbnail} = placement
                     if (!service) {
+                        if (thumbnail) {
+                            nextTiles.push({
+                                id: placement.id,
+                                src: thumbnail,
+                                x: placement.x,
+                                y: placement.y,
+                                width: placement.width,
+                                height: placement.height,
+                            })
+                        }
                         return
                     }
                     const tileProfile = service.tiles[0]

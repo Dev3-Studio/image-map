@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 .nx/
 .idea/
+.playwright-cli/
 
 # Next.js
 apps/*/.next/

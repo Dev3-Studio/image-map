@@ -9,6 +9,7 @@ import coordsjson from './assets/coords.json'
 import ImageOverlay from './ImageOverlay.tsx'
 import IIIFImageLayer from './IIIFImageLayer.tsx'
 import {loadIIIFManifest, type IIIFMapDefinition} from './iiifManifest.ts'
+import {loadStressTestMap} from './stressTestMap.ts'
 import Toolbar from './Toolbar.tsx'
 import {
     Minimap,
@@ -18,8 +19,7 @@ import {
 } from './TesseraChrome.tsx'
 
 const FALLBACK_MAP_SIZE = 768
-const INITIAL_SCALE = 1.7
-const MIN_SCALE = 0.08
+const MIN_SCALE = 0.04
 const MAX_SCALE = 8
 const HIGH_RESOLUTION_ZOOM = 1.1
 const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
@@ -33,6 +33,7 @@ interface Point {
 
 interface ImageCoords extends Point {
     width: number
+    height?: number
 }
 
 interface UploadedTile extends Point {
@@ -88,6 +89,10 @@ function updateLocation(
         cy: String(Math.round(((wrapper.offsetHeight / 2 - viewport.positionY) / viewport.scale) * 100) / 100),
         z: String(Math.round(viewport.scale * 10000) / 10000),
     })
+    const demo = new URLSearchParams(window.location.search).get('demo')
+    if (demo) {
+        params.set('demo', demo)
+    }
     const nextUrl = `${tileIndex === null ? '/' : `/tile/${tileIndex}`}?${params}`
 
     if (`${window.location.pathname}${window.location.search}` === nextUrl) {
@@ -135,7 +140,7 @@ function TesseraMap({
         const top = viewport.positionY + coords.y * viewport.scale
         marker.style.transform = `translate3d(${left}px, ${top}px, 0)`
         marker.style.width = `${coords.width * viewport.scale}px`
-        marker.style.height = `${coords.width * viewport.scale}px`
+        marker.style.height = `${(coords.height ?? coords.width) * viewport.scale}px`
         marker.classList.toggle('tile-selection-marker--label-below', top < 56)
     }, [activeTileIndex, coordsList])
 
@@ -162,13 +167,13 @@ function TesseraMap({
                 Math.max(
                     MIN_SCALE,
                     Math.min(wrapper.offsetWidth, wrapper.offsetHeight) *
-                        JUMP_TO_TILE_VIEWPORT_RATIO / coords.width,
+                        JUMP_TO_TILE_VIEWPORT_RATIO / Math.max(coords.width, coords.height),
                 ),
             )
 
             return {
                 positionX: wrapper.offsetWidth / 2 - (coords.x + coords.width / 2) * scale,
-                positionY: wrapper.offsetHeight / 2 - (coords.y + coords.width / 2) * scale,
+                positionY: wrapper.offsetHeight / 2 - (coords.y + coords.height / 2) * scale,
                 scale,
             }
         })()
@@ -212,9 +217,22 @@ function TesseraMap({
                 'easeOut',
             )
         } else if (transform) {
-            transform.centerView(INITIAL_SCALE, 0, 'easeOut')
+            const wrapper = transform.instance.wrapperComponent
+            const fitScale = wrapper
+                ? Math.max(
+                    MIN_SCALE,
+                    Math.min(
+                        MAX_SCALE,
+                        Math.min(
+                            wrapper.offsetWidth / mapDefinition.width,
+                            wrapper.offsetHeight / mapDefinition.height,
+                        ) * 0.94,
+                    ),
+                )
+                : MIN_SCALE
+            transform.centerView(fitScale, 0, 'easeOut')
         }
-    }, [coordsList, focusTile])
+    }, [coordsList, focusTile, mapDefinition.height, mapDefinition.width])
 
     useEffect(() => {
         const handlePopState = () => restoreLocation()
@@ -265,7 +283,7 @@ function TesseraMap({
                 point.x > coords.x &&
                 point.x < coords.x + coords.width &&
                 point.y > coords.y &&
-                point.y < coords.y + coords.width
+                point.y < coords.y + coords.height
             ) {
                 activeTileIndexRef.current = index
                 setActiveTileIndex(index)
@@ -295,7 +313,7 @@ function TesseraMap({
                     limitToBounds={false}
                     minScale={MIN_SCALE}
                     maxScale={MAX_SCALE}
-                    initialScale={INITIAL_SCALE}
+                    initialScale={MIN_SCALE}
                     smooth={false}
                     doubleClick={{disabled: true}}
                     wheel={{step: 0.15}}
@@ -350,7 +368,7 @@ function TesseraMap({
                             style={{width: mapDefinition.width, height: mapDefinition.height}}
                         >
                             <img
-                                src="/collage.webp"
+                                src={mapDefinition.previewUrl}
                                 alt="Tessera collage map"
                                 id="collage"
                                 fetchPriority="high"
@@ -499,6 +517,7 @@ function TesseraMap({
 }
 
 function App() {
+    const useShowcase = new URLSearchParams(window.location.search).get('demo') === 'showcase'
     const [mapState, setMapState] = useState<{
         definition: IIIFMapDefinition
         manifestReady: boolean
@@ -507,7 +526,8 @@ function App() {
     useEffect(() => {
         let cancelled = false
 
-        loadIIIFManifest()
+        const loadMap = useShowcase ? loadIIIFManifest : loadStressTestMap
+        loadMap()
             .then((definition) => {
                 if (!cancelled) {
                     setMapState({definition, manifestReady: true})
@@ -519,6 +539,7 @@ function App() {
                         definition: {
                             width: FALLBACK_MAP_SIZE,
                             height: FALLBACK_MAP_SIZE,
+                            previewUrl: '/collage.webp',
                             placements: fallbackCoordsList.map((coords, index) => ({
                                 ...coords,
                                 height: coords.width,
@@ -533,12 +554,15 @@ function App() {
         return () => {
             cancelled = true
         }
-    }, [])
+    }, [useShowcase])
 
     if (!mapState) {
         return (
             <main className="tessera-app map-loading" aria-busy="true">
-                <img src="/collage.webp" alt="Preparing the Tessera collage map"/>
+                <img
+                    src={useShowcase ? '/collage.webp' : '/collage-stress.webp'}
+                    alt="Preparing the Tessera collage map"
+                />
             </main>
         )
     }

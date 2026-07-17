@@ -44,6 +44,7 @@ export interface IIIFPlacement {
 export interface IIIFMapDefinition {
     width: number
     height: number
+    previewUrl: string
     placements: IIIFPlacement[]
 }
 
@@ -96,6 +97,7 @@ export function loadIIIFManifest() {
             return {
                 width: canvas.width,
                 height: canvas.height,
+                previewUrl: '/collage.webp',
                 placements,
             }
         })
