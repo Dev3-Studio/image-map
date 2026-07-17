@@ -6,6 +6,13 @@ interface ModerationResponse {
     }>
 }
 
+interface OpenAIErrorResponse {
+    error?: {
+        code?: string
+        type?: string
+    }
+}
+
 function json(body: Record<string, unknown>, status = 200) {
     return Response.json(body, {
         status,
@@ -77,15 +84,20 @@ export default {
             })
 
             if (!response.ok) {
+                const failure = await response.json().catch(() => null) as OpenAIErrorResponse | null
+                const upstreamCode = failure?.error?.code ?? failure?.error?.type ?? 'unknown'
                 console.error(JSON.stringify({
                     event: 'moderation_failed',
                     status: response.status,
+                    upstreamCode,
                     requestId: response.headers.get('x-request-id'),
                 }))
                 const reason = response.status === 401 || response.status === 403
                     ? 'credentials_rejected'
                     : response.status === 429
-                        ? 'rate_limited'
+                        ? upstreamCode === 'insufficient_quota'
+                            ? 'quota_exhausted'
+                            : 'rate_limited'
                         : response.status >= 400 && response.status < 500
                             ? 'request_rejected'
                             : 'upstream_unavailable'

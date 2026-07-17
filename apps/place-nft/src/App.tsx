@@ -601,6 +601,7 @@ function TesseraMap({
                                     not_configured: 'Image moderation is not configured on this deployment.',
                                     credentials_rejected: 'The moderation API key was rejected. Check the production key.',
                                     rate_limited: 'Image moderation is temporarily rate limited. Try again shortly.',
+                                    quota_exhausted: 'The OpenAI API project has no active quota. Check its billing status.',
                                     request_rejected: 'The moderation service rejected this image. Try a different file.',
                                     upstream_unavailable: 'Image moderation is temporarily unavailable. Try again shortly.',
                                     invalid_response: 'Image moderation returned an invalid response. Try again shortly.',
