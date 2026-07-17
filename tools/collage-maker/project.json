@@ -29,6 +29,24 @@
         "cwd": "tools/collage-maker"
       }
     },
+    "check-lambda": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "outputs": [
+        "{projectRoot}/target"
+      ],
+      "options": {
+        "command": "cargo check --locked --features lambda --bin collage-lambda",
+        "cwd": "tools/collage-maker"
+      }
+    },
+    "build-lambda-image": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build --platform linux/amd64 -f Dockerfile.lambda .",
+        "cwd": "tools/collage-maker"
+      }
+    },
     "lint": {
       "executor": "nx:run-commands",
       "outputs": [
@@ -60,7 +78,7 @@
     "run": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "cargo run --locked",
+        "command": "cargo run --release --locked",
         "cwd": "tools/collage-maker"
       }
     },
@@ -70,7 +88,7 @@
         "{workspaceRoot}/apps/place-nft/public/iiif"
       ],
       "options": {
-        "command": "cargo run --locked -- publish-grid --images showcase --output ../../apps/place-nft/public/iiif --base-url /iiif --canvas-width 768 --columns 3 --tile-size 1024 --jpeg-quality 82 --preview-output ../../apps/place-nft/public/collage.webp --coords-output ../../apps/place-nft/src/assets/coords.json",
+        "command": "cargo run --release --locked -- publish-grid --images showcase --output ../../apps/place-nft/public/iiif --base-url /iiif --canvas-width 768 --columns 3 --tile-size 1024 --jpeg-quality 82 --preview-output ../../apps/place-nft/public/collage.webp --coords-output ../../apps/place-nft/src/assets/coords.json",
         "cwd": "tools/collage-maker"
       }
     },

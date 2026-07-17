@@ -1,0 +1,41 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "collage-generation-infra",
+  "projectType": "application",
+  "sourceRoot": "infra/collage-generation",
+  "tags": ["type:infra", "scope:collage"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec tsc --noEmit",
+        "cwd": "infra/collage-generation"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["typecheck"],
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "pnpm exec tsc -p tsconfig.handlers.json",
+        "cwd": "infra/collage-generation"
+      }
+    },
+    "synth": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "pnpm exec cdk synth",
+        "cwd": "infra/collage-generation"
+      }
+    },
+    "deploy": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "pnpm exec cdk deploy",
+        "cwd": "infra/collage-generation"
+      }
+    }
+  }
+}

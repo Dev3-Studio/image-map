@@ -1,5 +1,7 @@
 import {useEffect, useState} from 'react'
+import useSWR from 'swr'
 import coordsjson from '../assets/coords.json'
+import {currentReleaseUrl, loadCollageRelease} from '../collageRelease.ts'
 import {loadIIIFManifest, type IIIFMapDefinition} from '../iiifManifest.ts'
 import {
     loadStressTestMap,
@@ -24,6 +26,7 @@ export interface MapPreviewSources {
 
 export interface MapState {
     definition: IIIFMapDefinition
+    generationId: string
     manifestReady: boolean
 }
 
@@ -44,18 +47,53 @@ export function isShowcaseDemo() {
 export function useMapDefinition() {
     const useShowcase = isShowcaseDemo()
     const [mapState, setMapState] = useState<MapState | null>(null)
+    const {data: remoteRelease} = useSWR(
+        useShowcase ? null : currentReleaseUrl(),
+        loadCollageRelease,
+        {
+            refreshInterval: 15_000,
+            refreshWhenHidden: false,
+            revalidateOnFocus: true,
+        },
+    )
 
     useEffect(() => {
         let cancelled = false
 
-        const loadMap = useShowcase ? loadIIIFManifest : loadStressTestMap
-        loadMap()
-            .then((definition) => {
+        void (async () => {
+            try {
+                const definition = useShowcase
+                    ? await loadIIIFManifest()
+                    : remoteRelease
+                        ? await loadIIIFManifest(remoteRelease.manifestUrl, remoteRelease.previewUrl)
+                        : await loadStressTestMap()
+
                 if (!cancelled) {
-                    setMapState({definition, manifestReady: true})
+                    setMapState({
+                        definition,
+                        generationId: useShowcase
+                            ? 'showcase'
+                            : remoteRelease?.generationId ?? 'stress-test',
+                        manifestReady: true,
+                    })
                 }
-            })
-            .catch(() => {
+            } catch {
+                if (remoteRelease && !useShowcase) {
+                    try {
+                        const definition = await loadStressTestMap()
+                        if (!cancelled) {
+                            setMapState({
+                                definition,
+                                generationId: 'stress-test',
+                                manifestReady: true,
+                            })
+                        }
+                        return
+                    } catch {
+                        // Fall through to the bundled coordinate fallback.
+                    }
+                }
+
                 if (!cancelled) {
                     setMapState({
                         definition: {
@@ -68,15 +106,17 @@ export function useMapDefinition() {
                                 id: `fallback-${index}`,
                             })),
                         },
+                        generationId: 'fallback',
                         manifestReady: false,
                     })
                 }
-            })
+            }
+        })()
 
         return () => {
             cancelled = true
         }
-    }, [useShowcase])
+    }, [remoteRelease, useShowcase])
 
     // Before the definition resolves, fall back to the preview the active demo is
     // known to load, so the first paint already shows the right image.

@@ -9,6 +9,8 @@ node_modules/
 apps/*/.next/
 apps/*/out/
 apps/*/dist/
+infra/*/dist/
+infra/*/cdk.out/
 
 # Rust
 tools/*/target/

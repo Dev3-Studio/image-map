@@ -5,6 +5,7 @@ This repository combines the NFT collage app and the collage maker tool in one N
 ## Projects
 
 - `apps/place-nft` - Vite NFT collage app
+- `infra/collage-generation` - AWS CDK serverless generation pipeline
 - `tools/collage-maker` - Rust collage generator
 
 `/` serves the marketing landing page, and the collage itself lives at `/collage`, with `/tile/{n}` deep links unchanged. The landing hero draws its background from the same map preview the collage renders, so the two never drift apart.
@@ -40,9 +41,16 @@ pnpm nx -- show projects
 pnpm nx -- build place-nft
 pnpm nx -- build collage-maker
 pnpm nx -- run collage-maker:run
+pnpm nx -- synth collage-generation-infra
 ```
 
-The Rust executable expects its runtime `input` and `output` directories under `tools/collage-maker`; these directories remain ignored by Git. A normal run now publishes an IIIF Presentation 3 manifest and static Image API 3 Level 0 services to `output/iiif` alongside the legacy collage output.
+## Serverless collage releases
+
+The production path accepts an immutable snapshot from a trusted backend, queues it through DynamoDB and FIFO SQS, runs the Rust generator in Lambda, and atomically publishes a versioned release through S3 and CloudFront. See [the infrastructure guide](infra/collage-generation/README.md) for deployment, snapshot, API, and release contracts.
+
+Set `VITE_COLLAGE_RELEASE_BASE_URL` to the stack's `ReleaseBaseUrl` output when building the frontend. The app polls `current.json` every 15 seconds while visible and keeps the bundled collage as its offline/local fallback.
+
+The Rust executable expects its runtime `input` and `output` directories under `tools/collage-maker`; these directories remain ignored by Git. A normal run publishes a bounded WebP preview, navigation coordinates, an IIIF Presentation 3 manifest, and static Image API 3 Level 0 services. The logical map dimensions stay full size while the preview is capped at 4096 pixels per edge.
 
 Set `IIIF_PUBLIC_BASE_URL` to the final public HTTP(S) URL before publishing production images so every IIIF resource has a dereferenceable standards-compliant identifier:
 
@@ -76,11 +84,6 @@ pnpm nx -- run collage-maker:publish-stress
 
 The stress publisher writes AVIF and WebP variants for both previews and every leaf image. Encoding uses high visual-quality settings and preserves four source pixels per map pixel, with a 384px floor for small placements and no fixed upper resolution cap. Output never upscales past the uploaded source, so larger high-resolution uploads retain proportionally more detail without changing the established density of small images. Set `STRESS_ENCODER_JOBS` from 1 to 8 to control parallel AVIF/WebP encoding according to available memory.
 
-`publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, and `--jpeg-quality` to configure it. `--preview-output` and `--coords-output` keep the low-resolution map preview and navigation coordinates synchronized with the manifest.
+`publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, `--jpeg-quality`, and `--preview-max-edge` to configure it. `--preview-output` and `--coords-output` keep the bounded low-resolution map preview and navigation coordinates synchronized with the manifest.
 
-WebP tiles are encoded sequentially by default to keep peak memory bounded. On machines with additional memory, set `COLLAGE_ENCODER_JOBS` up to the number of output tiles to encode tiles concurrently:
-
-```powershell
-$env:COLLAGE_ENCODER_JOBS=3
-pnpm nx -- run collage-maker:run
-```
+The Lambda worker downloads four source images per batch and uploads up to sixteen generated artifacts concurrently. These deployment defaults are exposed as `SOURCE_BATCH_SIZE` and `ARTIFACT_UPLOAD_CONCURRENCY` on the worker function.

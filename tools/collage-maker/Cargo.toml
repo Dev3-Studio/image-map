@@ -2,6 +2,7 @@
 name = "collage-maker"
 version = "0.1.0"
 edition = "2021"
+default-run = "collage-maker"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,8 +13,40 @@ rayon = "1.8.0"
 serde_json = { version = "1.0.111", features = [] }
 serde = { version = "1.0.104", features = ["derive"] }
 webp = { version = "0.2.6", default-features = false }
+aws-config = { version = "1.8", optional = true }
+aws-sdk-dynamodb = { version = "1.86", optional = true }
+aws-sdk-s3 = { version = "1.96", optional = true }
+aws_lambda_events = { version = "0.17", features = ["sqs"], optional = true }
+chrono = { version = "0.4", features = ["serde"], optional = true }
+futures = { version = "0.3", optional = true }
+lambda_runtime = { version = "0.14", optional = true }
+tokio = { version = "1.45", features = ["macros", "rt-multi-thread"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["fmt", "json"], optional = true }
 
 [features]
+default = []
+lambda = [
+    "dep:aws-config",
+    "dep:aws-sdk-dynamodb",
+    "dep:aws-sdk-s3",
+    "dep:aws_lambda_events",
+    "dep:chrono",
+    "dep:futures",
+    "dep:lambda_runtime",
+    "dep:tokio",
+    "dep:tracing",
+    "dep:tracing-subscriber",
+]
+
+[[bin]]
+name = "collage-maker"
+path = "src/main.rs"
+
+[[bin]]
+name = "collage-lambda"
+path = "src/bin/collage-lambda.rs"
+required-features = ["lambda"]
 
 
 [profile.dev]

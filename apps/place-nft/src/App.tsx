@@ -500,7 +500,7 @@ function TesseraMap({
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
                 <Suspense fallback={null}>
                     <ImageOverlay
-                        imageUrl={coordsList[selectedImageIndex].thumbnail ?? '/collage.webp'}
+                        imageUrl={coordsList[selectedImageIndex].thumbnail ?? mapDefinition.previewUrl}
                         imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
                         title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
                         tileCount={coordsList.length}
@@ -612,6 +612,7 @@ function App() {
 
     return (
         <TesseraMap
+            key={mapState.generationId}
             mapDefinition={mapState.definition}
             manifestReady={mapState.manifestReady}
         />

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tessera.example/schemas/collage-snapshot-v1.json",
+  "title": "Tessera collage snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceRevision",
+    "gridKey",
+    "baseTileWidth",
+    "previewMaxEdge",
+    "images"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "sourceRevision": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "gridKey": {"type": "string", "minLength": 1},
+    "baseTileWidth": {"type": "integer", "minimum": 1},
+    "previewMaxEdge": {"type": "integer", "minimum": 256, "maximum": 4096},
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "key"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,128}$"
+          },
+          "key": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
