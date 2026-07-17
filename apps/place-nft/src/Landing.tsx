@@ -3,20 +3,20 @@ import type {MapPreviewSources} from './hooks/useMapDefinition.ts'
 import './Landing.css'
 
 const STATS = [
-    {value: '10,000', label: 'Tiles on the canvas'},
-    {value: '7,680 px', label: 'Full canvas width'},
+    {value: '4,999', label: 'Tiles on the canvas'},
+    {value: '12,800 px', label: 'Canvas width and height'},
     {value: 'Any size', label: 'Accepted uploads'},
-    {value: '1 of 1', label: 'Each tile, forever'},
+    {value: '1 / month', label: 'Owner image changes'},
 ]
 
 const FAQS = [
     {
         q: 'What exactly am I buying?',
-        a: 'A single tile on the Tessera canvas — a fixed square region of the shared collage. Minting records your wallet address as the tile’s owner and permanently places your image inside it.',
+        a: 'A single tile on the Tessera canvas — a fixed square region of the shared collage. Minting records your wallet address as the tile’s owner, while the image displayed in that tile remains yours to manage.',
     },
     {
         q: 'Can I change my image later?',
-        a: 'No. Tessera is a one-shot canvas: once a tile is minted, its image is final. That permanence is what makes the finished picture worth being part of.',
+        a: 'Yes. A tile owner can upload a replacement image once per month. Each replacement uses the same crop editor and content check as the original upload.',
     },
     {
         q: 'What image formats work?',
@@ -27,8 +27,8 @@ const FAQS = [
         a: 'No. Anyone can pan, zoom, and search the collage freely. Demo mode also lets you place an image without connecting a wallet.',
     },
     {
-        q: 'What happens when all 10,000 tiles are claimed?',
-        a: 'The canvas is complete. The finished collage stays online for anyone to explore, and every tile remains tied to the address that minted it.',
+        q: 'What happens when all 4,999 tiles are claimed?',
+        a: 'The canvas is fully owned. It stays online for anyone to explore, each tile remains tied to the address that minted it, and owners can still make their monthly image change.',
     },
 ]
 
@@ -84,12 +84,12 @@ export default function Landing({
                     <div className="glass-surface landing-hero-card">
                         <div className="landing-badge">
                             <span className="brand-mark landing-badge-mark" aria-hidden="true"/>
-                            One canvas · 10,000 tiles
+                            One canvas · 4,999 tiles
                         </div>
-                        <h1 className="landing-title">Ten thousand images. One picture.</h1>
+                        <h1 className="landing-title">Nearly five thousand images. One picture.</h1>
                         <p className="landing-lede">
-                            Tessera is a shared collage — a single 7,680-pixel canvas divided into 10,000 square
-                            tiles. Claim a spot, mint your image, and it becomes a permanent piece of the picture.
+                            Tessera is a shared collage — a 12,800 × 12,800-pixel canvas divided into 4,999
+                            mixed-size tiles. Claim a spot, mint your image, and update it up to once per month.
                         </p>
                         <div className="landing-hero-actions">
                             <a className="landing-cta landing-cta--large" href={collageHref} onClick={onOpenCollage}>
@@ -146,8 +146,8 @@ export default function Landing({
                         <div className="landing-step-index">STEP 3</div>
                         <h3>Mint it to the canvas</h3>
                         <p>
-                            Connect a wallet and mint. Your tile is written to the collage permanently, with your
-                            address on record as its owner.
+                            Connect a wallet and mint. Your address stays on record as the tile’s owner, and you
+                            can replace its image once per month.
                         </p>
                     </article>
                 </div>
