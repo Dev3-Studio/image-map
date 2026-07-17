@@ -10,7 +10,7 @@ This repository combines the NFT collage app and the collage maker tool in one N
 
 `/` serves the marketing landing page, and the collage itself lives at `/collage`, with `/tile/{n}` deep links unchanged. The landing hero draws its background from the same map preview the collage renders, so the two never drift apart.
 
-The collage opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its 2,048px overview, 6,400px medium LOD, IIIF Presentation manifest, and leaf tiles are generated from the attached face and object images and published under the `tessera-5000-v1` prefix in R2. The browser prefers AVIF and falls back to WebP; leaf resolution scales with each placement up to the source resolution. The app hydrates the placement geometry locally, defers the medium LOD until it is near the active zoom range, and only requests leaf images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
+The collage opens with a 4,999-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its 2,048px overview, 6,400px medium LOD, IIIF Presentation manifest, and leaf tiles are generated from the attached face and object images and published under the legacy `tessera-5000-v1` prefix in R2. The browser prefers AVIF and falls back to WebP; leaf resolution scales with each placement up to the source resolution. The app hydrates the placement geometry locally, defers the medium LOD until it is near the active zoom range, and only requests leaf images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
 
 ## Prerequisites
 
@@ -88,7 +88,7 @@ The committed showcase uses portable root-relative identifiers and can be regene
 pnpm nx -- run collage-maker:publish-showcase
 ```
 
-To regenerate the 5,000-image R2 staging publication from the untracked `Images` attachment:
+To regenerate the 4,999-image R2 staging publication from the untracked `Images` attachment:
 
 ```powershell
 pnpm nx -- run collage-maker:publish-stress

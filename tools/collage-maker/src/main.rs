@@ -617,11 +617,16 @@ fn run_publish_stress(args: &[String]) {
     );
     let coords: Vec<ImageCoords> = serde_json::from_reader(reader)
         .unwrap_or_else(|error| panic!("could not parse {}: {error}", coords_path.display()));
-    assert_eq!(
-        paths.len(),
-        coords.len() + 1,
-        "publish-stress expects exactly one more image than coordinate"
+    assert!(
+        paths.len() >= coords.len(),
+        "publish-stress requires at least one image per coordinate"
     );
+    if paths.len() > coords.len() {
+        println!(
+            "Ignoring {} source image(s) without coordinates",
+            paths.len() - coords.len()
+        );
+    }
 
     let normalized_coords: Vec<_> = coords
         .into_iter()
@@ -638,23 +643,12 @@ fn run_publish_stress(args: &[String]) {
         "normalized coordinates must fit inside the square canvas"
     );
 
-    let mut placements: Vec<_> = paths
+    let placements: Vec<_> = paths
         .iter()
         .take(normalized_coords.len())
         .cloned()
         .zip(normalized_coords.iter().cloned())
         .collect();
-    let first = normalized_coords
-        .first()
-        .expect("coordinates cannot be empty");
-    placements.push((
-        paths.last().unwrap().clone(),
-        ImageCoords {
-            x: first.x,
-            y: first.y,
-            width: first.width / 2,
-        },
-    ));
 
     render_preview(
         &placements,
