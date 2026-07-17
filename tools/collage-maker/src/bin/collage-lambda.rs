@@ -1,6 +1,7 @@
 use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::{BatchItemFailure, SqsBatchResponse, SqsEvent, SqsMessage};
 use aws_sdk_dynamodb::types::AttributeValue;
+use aws_sdk_s3::config::{Credentials, Region};
 use aws_sdk_s3::primitives::ByteStream;
 use chrono::Utc;
 use collage_maker::{
@@ -415,11 +416,24 @@ async fn main() -> Result<(), Error> {
         .with_max_level(tracing::Level::INFO)
         .init();
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let r2_bucket = required_environment("R2_BUCKET_NAME")?;
+    let r2_config = aws_sdk_s3::config::Builder::from(&config)
+        .endpoint_url(required_environment("R2_ENDPOINT")?)
+        .region(Region::new("auto"))
+        .credentials_provider(Credentials::new(
+            required_environment("R2_ACCESS_KEY_ID")?,
+            required_environment("R2_SECRET_ACCESS_KEY")?,
+            None,
+            None,
+            "r2",
+        ))
+        .force_path_style(true)
+        .build();
     let state = Arc::new(State {
-        s3: aws_sdk_s3::Client::new(&config),
+        s3: aws_sdk_s3::Client::from_conf(r2_config),
         dynamodb: aws_sdk_dynamodb::Client::new(&config),
-        input_bucket: required_environment("INPUT_BUCKET_NAME")?,
-        release_bucket: required_environment("RELEASE_BUCKET_NAME")?,
+        input_bucket: r2_bucket.clone(),
+        release_bucket: r2_bucket,
         jobs_table: required_environment("JOBS_TABLE_NAME")?,
         release_base_url: required_environment("RELEASE_BASE_URL")?,
         source_batch_size: environment_usize("SOURCE_BATCH_SIZE", 4),

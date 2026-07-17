@@ -16,9 +16,17 @@ import {
 } from './contracts.js'
 
 const tableName = requiredEnvironment('JOBS_TABLE_NAME')
-const inputBucketName = requiredEnvironment('INPUT_BUCKET_NAME')
+const r2BucketName = requiredEnvironment('R2_BUCKET_NAME')
 const dynamodb = DynamoDBDocumentClient.from(new DynamoDBClient({}))
-const s3 = new S3Client({})
+const s3 = new S3Client({
+    region: 'auto',
+    endpoint: requiredEnvironment('R2_ENDPOINT'),
+    forcePathStyle: true,
+    credentials: {
+        accessKeyId: requiredEnvironment('R2_ACCESS_KEY_ID'),
+        secretAccessKey: requiredEnvironment('R2_SECRET_ACCESS_KEY'),
+    },
+})
 
 function requiredEnvironment(name: string) {
     const value = process.env[name]
@@ -58,7 +66,7 @@ async function enqueue(sourceRevision: string) {
     let snapshotETag: string
     try {
         const head = await s3.send(new HeadObjectCommand({
-            Bucket: inputBucketName,
+            Bucket: r2BucketName,
             Key: snapshotKey,
         }))
         snapshotETag = normalizeEtag(head.ETag)

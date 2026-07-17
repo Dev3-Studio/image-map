@@ -86,4 +86,4 @@ The stress publisher writes AVIF and WebP variants for both previews and every l
 
 `publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, `--jpeg-quality`, and `--preview-max-edge` to configure it. `--preview-output` and `--coords-output` keep the bounded low-resolution map preview and navigation coordinates synchronized with the manifest.
 
-The Lambda worker downloads four source images per batch and uploads up to sixteen generated artifacts concurrently. These deployment defaults are exposed as `SOURCE_BATCH_SIZE` and `ARTIFACT_UPLOAD_CONCURRENCY` on the worker function.
+The optional serverless pipeline keeps snapshots and generated releases in the existing R2 bucket while AWS Lambda, DynamoDB, and SQS handle generation and orchestration. The Lambda worker downloads four source images per batch and uploads up to sixteen generated artifacts concurrently. These deployment defaults are exposed as `SOURCE_BATCH_SIZE` and `ARTIFACT_UPLOAD_CONCURRENCY` on the worker function. See `infra/collage-generation/README.md` for deployment and CORS configuration.
