@@ -9,6 +9,7 @@ import {
 } from '@aws-sdk/lib-dynamodb'
 
 const CANDY_GUARD_PROGRAM_ID = 'Guard1JwRhJkVH6XZhzoYxeBVQe872VH6QggF4BWmS9g'
+const MINT_V2_DISCRIMINATOR = [120, 121, 23, 146, 173, 110, 199, 205]
 const MAX_AUTH_AGE_MS = 5 * 60 * 1000
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_TILE_INDEX = 9_999
@@ -205,6 +206,11 @@ async function verifyCandyMachineMint(transaction: string, mint: string, wallet:
         transaction: {
             message: {
                 accountKeys: Array<string | {pubkey: string, signer?: boolean}>
+                instructions?: Array<{
+                    accounts?: string[]
+                    data?: string
+                    programId?: string
+                }>
             }
         }
     } | null>('getTransaction', [transaction, {
@@ -227,11 +233,24 @@ async function verifyCandyMachineMint(transaction: string, mint: string, wallet:
         balance.uiTokenAmount.decimals === 0)
     const invokedCandyGuard = result.meta.logMessages?.some((message) =>
         message.startsWith(`Program ${CANDY_GUARD_PROGRAM_ID} invoke`))
+    const mintInstruction = result.transaction.message.instructions?.some((instruction) => {
+        if (
+            instruction.programId !== CANDY_GUARD_PROGRAM_ID ||
+            instruction.accounts?.[2] !== candyMachineId ||
+            instruction.accounts?.[6] !== mint ||
+            !instruction.data
+        ) {
+            return false
+        }
+        const discriminator = decodeBase58(instruction.data).subarray(0, MINT_V2_DISCRIMINATOR.length)
+        return discriminator.every((byte, index) => byte === MINT_V2_DISCRIMINATOR[index])
+    })
 
     return Boolean(
         walletSigned &&
         mintedToWallet &&
         invokedCandyGuard &&
+        mintInstruction &&
         accountKeys.includes(candyMachineId) &&
         accountKeys.includes(mint),
     )
