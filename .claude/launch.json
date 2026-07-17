@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "place-nft",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:place-nft"],
+      "port": 5173
+    }
+  ]
+}
