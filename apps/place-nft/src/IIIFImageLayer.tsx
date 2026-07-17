@@ -4,6 +4,9 @@ import {type IIIFPlacement} from './iiifManifest.ts'
 import './IIIFImageLayer.css'
 
 const PRELOAD_MARGIN = 160
+const CENTER_BATCH_SIZE = 16
+const OUTWARD_BATCH_SIZE = 32
+const OUTWARD_BATCH_DELAY = 100
 
 interface RenderedTile {
     id: string
@@ -29,6 +32,38 @@ function IIIFImageLayer({
 
     useEffect(() => {
         let animationFrame: number | null = null
+        let batchTimeout: number | null = null
+
+        const cancelPendingBatch = () => {
+            if (batchTimeout !== null) {
+                window.clearTimeout(batchTimeout)
+                batchTimeout = null
+            }
+        }
+
+        const stageTilesFromCenter = (nextTiles: RenderedTile[]) => {
+            const nextTileKeys = nextTiles.map((tile) => tile.id).join('|')
+            if (tileKeysRef.current === nextTileKeys) {
+                return
+            }
+
+            cancelPendingBatch()
+            tileKeysRef.current = nextTileKeys
+            let renderedCount = Math.min(CENTER_BATCH_SIZE, nextTiles.length)
+            setTiles(nextTiles.slice(0, renderedCount))
+
+            const renderNextBatch = () => {
+                renderedCount = Math.min(renderedCount + OUTWARD_BATCH_SIZE, nextTiles.length)
+                setTiles(nextTiles.slice(0, renderedCount))
+                batchTimeout = renderedCount < nextTiles.length
+                    ? window.setTimeout(renderNextBatch, OUTWARD_BATCH_DELAY)
+                    : null
+            }
+
+            if (renderedCount < nextTiles.length) {
+                batchTimeout = window.setTimeout(renderNextBatch, OUTWARD_BATCH_DELAY)
+            }
+        }
 
         const updateVisibleTiles = () => {
             if (animationFrame !== null) {
@@ -40,6 +75,7 @@ function IIIFImageLayer({
 
                 if (!visible || placements.length === 0) {
                     if (tileKeysRef.current) {
+                        cancelPendingBatch()
                         tileKeysRef.current = ''
                         setTiles([])
                     }
@@ -57,6 +93,8 @@ function IIIFImageLayer({
                 const viewTop = -positionY / scale - margin
                 const viewRight = (-positionX + wrapper.offsetWidth) / scale + margin
                 const viewBottom = (-positionY + wrapper.offsetHeight) / scale + margin
+                const viewCenterX = (-positionX + wrapper.offsetWidth / 2) / scale
+                const viewCenterY = (-positionY + wrapper.offsetHeight / 2) / scale
                 const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
                 const nextTiles: RenderedTile[] = []
 
@@ -139,11 +177,15 @@ function IIIFImageLayer({
                     }
                 })
 
-                const nextTileKeys = nextTiles.map((tile) => tile.id).join('|')
-                if (tileKeysRef.current !== nextTileKeys) {
-                    tileKeysRef.current = nextTileKeys
-                    setTiles(nextTiles)
-                }
+                nextTiles.sort((first, second) => {
+                    const firstX = first.x + first.width / 2 - viewCenterX
+                    const firstY = first.y + first.height / 2 - viewCenterY
+                    const secondX = second.x + second.width / 2 - viewCenterX
+                    const secondY = second.y + second.height / 2 - viewCenterY
+                    return firstX * firstX + firstY * firstY -
+                        (secondX * secondX + secondY * secondY)
+                })
+                stageTilesFromCenter(nextTiles)
             })
         }
 
@@ -157,6 +199,7 @@ function IIIFImageLayer({
             if (animationFrame !== null) {
                 window.cancelAnimationFrame(animationFrame)
             }
+            cancelPendingBatch()
         }
     }, [placements, transformContext, visible])
 
@@ -168,13 +211,14 @@ function IIIFImageLayer({
             data-iiif-placement-count={placements.length}
             data-visible-tile-count={tiles.length}
         >
-            {tiles.map((tile) => (
+            {tiles.map((tile, index) => (
                 <img
                     key={tile.id}
                     className="iiif-image-tile"
                     src={tile.src}
                     alt=""
                     decoding="async"
+                    fetchPriority={index < CENTER_BATCH_SIZE ? 'high' : 'auto'}
                     draggable={false}
                     style={{
                         left: tile.x,
