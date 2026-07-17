@@ -12,6 +12,11 @@ export interface IIIFImageService {
     tiles: IIIFTileProfile[]
 }
 
+export interface OptimizedImageSources {
+    avif?: string
+    webp: string
+}
+
 interface IIIFAnnotation {
     id: string
     target: string
@@ -38,6 +43,7 @@ export interface IIIFPlacement {
     width: number
     height: number
     service?: IIIFImageService
+    sources?: OptimizedImageSources
     thumbnail?: string
 }
 
@@ -45,7 +51,9 @@ export interface IIIFMapDefinition {
     width: number
     height: number
     previewUrl: string
+    previewAvifUrl?: string
     mediumPreviewUrl?: string
+    mediumPreviewAvifUrl?: string
     placements: IIIFPlacement[]
 }
 

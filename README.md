@@ -7,7 +7,7 @@ This repository combines the NFT collage app and the collage maker tool in one N
 - `apps/place-nft` - Vite NFT collage app
 - `tools/collage-maker` - Rust collage generator
 
-The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its 2,048px overview, 6,400px medium LOD, IIIF Presentation manifest, and original JPEG leaf tiles are generated from the attached face and object images and published under the `tessera-5000-v1` prefix in R2. The app hydrates the placement geometry locally and only requests R2 images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
+The app opens with a 5,000-image stress demo based on the mixed-size quadtree placements in `coords4999.json`. Its 2,048px overview, 6,400px medium LOD, IIIF Presentation manifest, and leaf tiles are generated from the attached face and object images and published under the `tessera-5000-v1` prefix in R2. The browser prefers AVIF and falls back to WebP; leaf resolution scales with each placement up to the source resolution. The app hydrates the placement geometry locally, defers the medium LOD until it is near the active zoom range, and only requests leaf images inside the current viewport. Add `?demo=showcase` to the URL to load the nine-image local IIIF showcase instead.
 
 ## Prerequisites
 
@@ -71,6 +71,8 @@ To regenerate the 5,000-image R2 staging publication from the untracked `Images`
 ```powershell
 pnpm nx -- run collage-maker:publish-stress
 ```
+
+The stress publisher writes AVIF and WebP variants for both previews and every leaf image. Encoding uses high visual-quality settings and sizes each leaf at four source pixels per map pixel, clamped between 384px and 2,048px without upscaling past the attached source. Set `STRESS_ENCODER_JOBS` from 1 to 8 to control parallel AVIF/WebP encoding according to available memory.
 
 `publish-grid` is also available for another evenly spaced image set. Use `--images`, `--output`, `--base-url`, `--canvas-width`, `--columns`, `--tile-size`, and `--jpeg-quality` to configure it. `--preview-output` and `--coords-output` keep the low-resolution map preview and navigation coordinates synchronized with the manifest.
 

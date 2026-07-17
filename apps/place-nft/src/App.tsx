@@ -9,7 +9,11 @@ import coordsjson from './assets/coords.json'
 import ImageOverlay from './ImageOverlay.tsx'
 import IIIFImageLayer from './IIIFImageLayer.tsx'
 import {loadIIIFManifest, type IIIFMapDefinition} from './iiifManifest.ts'
-import {loadStressTestMap} from './stressTestMap.ts'
+import {
+    loadStressTestMap,
+    STRESS_PREVIEW_AVIF_URL,
+    STRESS_PREVIEW_URL,
+} from './stressTestMap.ts'
 import Toolbar from './Toolbar.tsx'
 import {
     Minimap,
@@ -22,6 +26,7 @@ const FALLBACK_MAP_SIZE = 768
 const MIN_SCALE = 0.04
 const MAX_SCALE = 8
 const MEDIUM_RESOLUTION_ZOOM = 0.14
+const MEDIUM_PRELOAD_ZOOM = 0.1
 const MEDIUM_TO_IMAGE_ZOOM = 0.46
 const IIIF_ONLY_HIGH_RESOLUTION_ZOOM = 1.1
 const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
@@ -124,6 +129,7 @@ function TesseraMap({
     const [guidanceVisible, setGuidanceVisible] = useState(true)
     const [usesTouchGestures] = useState(() => window.matchMedia('(pointer: coarse)').matches)
     const [detailLevel, setDetailLevel] = useState<DetailLevel>('preview')
+    const [mediumPreviewRequested, setMediumPreviewRequested] = useState(false)
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
@@ -332,6 +338,10 @@ function TesseraMap({
                                 ? 'medium'
                                 : 'preview'
 
+                        if (mapDefinition.mediumPreviewUrl && scale >= MEDIUM_PRELOAD_ZOOM) {
+                            setMediumPreviewRequested(true)
+                        }
+
                         setDetailLevel((currentDetailLevel) =>
                             currentDetailLevel === nextDetailLevel
                                 ? currentDetailLevel
@@ -375,6 +385,9 @@ function TesseraMap({
                             data-lod={detailLevel}
                             style={{width: mapDefinition.width, height: mapDefinition.height}}
                         >
+                            {mapDefinition.previewAvifUrl ? (
+                                <source type="image/avif" srcSet={mapDefinition.previewAvifUrl}/>
+                            ) : null}
                             <img
                                 src={mapDefinition.previewUrl}
                                 alt="Tessera collage map"
@@ -384,16 +397,21 @@ function TesseraMap({
                                 style={{width: mapDefinition.width, height: mapDefinition.height}}
                             />
                         </picture>
-                        {mapDefinition.mediumPreviewUrl ? (
-                            <img
-                                className={`collage-medium ${detailLevel !== 'preview' ? 'collage-medium--visible' : ''}`}
-                                src={mapDefinition.mediumPreviewUrl}
-                                alt=""
-                                aria-hidden={true}
-                                decoding="async"
-                                draggable={false}
-                                style={{width: mapDefinition.width, height: mapDefinition.height}}
-                            />
+                        {mapDefinition.mediumPreviewUrl && mediumPreviewRequested ? (
+                            <picture>
+                                {mapDefinition.mediumPreviewAvifUrl ? (
+                                    <source type="image/avif" srcSet={mapDefinition.mediumPreviewAvifUrl}/>
+                                ) : null}
+                                <img
+                                    className={`collage-medium ${detailLevel !== 'preview' ? 'collage-medium--visible' : ''}`}
+                                    src={mapDefinition.mediumPreviewUrl}
+                                    alt=""
+                                    aria-hidden={true}
+                                    decoding="async"
+                                    draggable={false}
+                                    style={{width: mapDefinition.width, height: mapDefinition.height}}
+                                />
+                            </picture>
                         ) : null}
                         <IIIFImageLayer
                             visible={detailLevel === 'images'}
@@ -463,6 +481,7 @@ function TesseraMap({
             {!picking && !uploadOpen ? (
                 <Minimap
                     imageUrl={mapDefinition.previewUrl}
+                    imageAvifUrl={mapDefinition.previewAvifUrl}
                     viewportRef={minimapViewportRef}
                     onNavigate={(event) => {
                         setGuidanceVisible(false)
@@ -493,6 +512,7 @@ function TesseraMap({
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
                 <ImageOverlay
                     imageUrl={coordsList[selectedImageIndex].thumbnail ?? '/collage.webp'}
+                    imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
                     title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
                     tileCount={coordsList.length}
                     onClick={() => setSelectedImageIndex(null)}
@@ -579,10 +599,13 @@ function App() {
     if (!mapState) {
         return (
             <main className="tessera-app map-loading" aria-busy="true">
-                <img
-                    src={useShowcase ? '/collage.webp' : '/collage-stress.webp'}
-                    alt="Preparing the Tessera collage map"
-                />
+                <picture>
+                    {!useShowcase ? <source type="image/avif" srcSet={STRESS_PREVIEW_AVIF_URL}/> : null}
+                    <img
+                        src={useShowcase ? '/collage.webp' : STRESS_PREVIEW_URL}
+                        alt="Preparing the Tessera collage map"
+                    />
+                </picture>
             </main>
         )
     }

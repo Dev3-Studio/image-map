@@ -10,11 +10,13 @@ import './ImageOverlay.css'
 
 function ImageOverlay({
     imageUrl,
+    imageAvifUrl,
     title,
     tileCount,
     onClick,
 }: {
     imageUrl: string
+    imageAvifUrl?: string
     title: string
     tileCount: number
     onClick: () => void
@@ -36,7 +38,10 @@ function ImageOverlay({
                     <line x1="9.5" y1="1.5" x2="1.5" y2="9.5"/>
                 </svg>
             </button>
-            <img className="overlay-image" src={imageUrl} alt={`Artwork for ${title}`}/>
+            <picture className="overlay-picture">
+                {imageAvifUrl ? <source type="image/avif" srcSet={imageAvifUrl}/> : null}
+                <img className="overlay-image" src={imageUrl} alt={`Artwork for ${title}`}/>
+            </picture>
             <div className="overlay-copy">
                 <h1>{title}</h1>
                 <div className="overlay-owner">

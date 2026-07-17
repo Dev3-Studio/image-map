@@ -34,6 +34,11 @@
   animation: panel-item-in 450ms 80ms var(--ease-out) both;
 }
 
+.overlay-picture {
+  display: block;
+  width: 100%;
+}
+
 .overlay-copy {
   display: flex;
   flex-direction: column;

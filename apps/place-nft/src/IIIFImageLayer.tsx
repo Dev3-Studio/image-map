@@ -11,6 +11,7 @@ const OUTWARD_BATCH_DELAY = 100
 interface RenderedTile {
     id: string
     src: string
+    avifSrc?: string
     x: number
     y: number
     width: number
@@ -108,12 +109,14 @@ function IIIFImageLayer({
                         return
                     }
 
-                    const {service, thumbnail} = placement
+                    const {service, sources, thumbnail} = placement
                     if (!service) {
-                        if (thumbnail) {
+                        const fallbackSource = sources?.webp ?? thumbnail
+                        if (fallbackSource) {
                             nextTiles.push({
                                 id: placement.id,
-                                src: thumbnail,
+                                src: fallbackSource,
+                                avifSrc: sources?.avif,
                                 x: placement.x,
                                 y: placement.y,
                                 width: placement.width,
@@ -212,21 +215,23 @@ function IIIFImageLayer({
             data-visible-tile-count={tiles.length}
         >
             {tiles.map((tile, index) => (
-                <img
-                    key={tile.id}
-                    className="iiif-image-tile"
-                    src={tile.src}
-                    alt=""
-                    decoding="async"
-                    fetchPriority={index < CENTER_BATCH_SIZE ? 'high' : 'auto'}
-                    draggable={false}
-                    style={{
-                        left: tile.x,
-                        top: tile.y,
-                        width: tile.width,
-                        height: tile.height,
-                    }}
-                />
+                <picture key={tile.id}>
+                    {tile.avifSrc ? <source type="image/avif" srcSet={tile.avifSrc}/> : null}
+                    <img
+                        className="iiif-image-tile"
+                        src={tile.src}
+                        alt=""
+                        decoding="async"
+                        fetchPriority={index < CENTER_BATCH_SIZE ? 'high' : 'auto'}
+                        draggable={false}
+                        style={{
+                            left: tile.x,
+                            top: tile.y,
+                            width: tile.width,
+                            height: tile.height,
+                        }}
+                    />
+                </picture>
             ))}
         </div>
     )

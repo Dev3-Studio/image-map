@@ -1,5 +1,8 @@
+use image::codecs::avif::AvifEncoder;
 use image::codecs::jpeg::JpegEncoder;
-use image::{DynamicImage, GenericImageView, ImageBuffer, ImageFormat, Rgba};
+use image::{
+    ColorType, DynamicImage, GenericImageView, ImageBuffer, ImageEncoder, ImageFormat, Rgba,
+};
 use libwebp_sys::WebPConfig;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -8,11 +11,18 @@ use std::env;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use webp::Encoder as WebPEncoder;
 
 const DEFAULT_IIIF_TILE_SIZE: u32 = 1024;
 const DEFAULT_IIIF_JPEG_QUALITY: u8 = 82;
+const STRESS_WEBP_QUALITY: f32 = 86.0;
+const STRESS_AVIF_QUALITY: u8 = 75;
+const STRESS_AVIF_SPEED: u8 = 8;
+const LEAF_PIXELS_PER_MAP_PIXEL: u32 = 4;
+const MIN_LEAF_EDGE: u32 = 384;
+const MAX_LEAF_EDGE: u32 = 2048;
 
 #[derive(Clone, Deserialize, Serialize)]
 struct ImageCoords {
@@ -174,11 +184,29 @@ fn save_webp(image: &ImageBuffer<Rgba<u8>, Vec<u8>>, path: &Path, quality: f32) 
     writer.write_all(&encoded).unwrap();
 }
 
+fn save_avif(image: &ImageBuffer<Rgba<u8>, Vec<u8>>, path: &Path, quality: u8) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+
+    let writer = File::create(path).unwrap();
+    AvifEncoder::new_with_speed_quality(writer, STRESS_AVIF_SPEED, quality)
+        .with_num_threads(Some(1))
+        .write_image(
+            image.as_raw(),
+            image.width(),
+            image.height(),
+            ColorType::Rgba8,
+        )
+        .unwrap_or_else(|error| panic!("failed to encode {}: {error}", path.display()));
+}
+
 fn render_preview(
     placements: &[(PathBuf, ImageCoords)],
     canvas_width: u32,
     preview_size: u32,
-    preview_output: &Path,
+    webp_output: &Path,
+    avif_output: &Path,
 ) {
     println!(
         "Rendering {} attached images into a {preview_size}px preview",
@@ -201,7 +229,8 @@ fn render_preview(
         );
         image::imageops::replace(&mut preview, &image, preview_x as i64, preview_y as i64);
     }
-    save_webp(&preview, preview_output, 78.0);
+    save_webp(&preview, webp_output, STRESS_WEBP_QUALITY);
+    save_avif(&preview, avif_output, STRESS_AVIF_QUALITY);
 }
 
 fn square_crop(path: &Path) -> DynamicImage {
@@ -538,9 +567,17 @@ fn run_publish_stress(args: &[String]) {
         option_value(args, "--preview-output")
             .expect("publish-stress requires --preview-output <file>"),
     );
+    let preview_avif_output = PathBuf::from(
+        option_value(args, "--preview-avif-output")
+            .expect("publish-stress requires --preview-avif-output <file>"),
+    );
     let medium_preview_output = PathBuf::from(
         option_value(args, "--medium-preview-output")
             .expect("publish-stress requires --medium-preview-output <file>"),
+    );
+    let medium_preview_avif_output = PathBuf::from(
+        option_value(args, "--medium-preview-avif-output")
+            .expect("publish-stress requires --medium-preview-avif-output <file>"),
     );
     let public_base_url =
         option_value(args, "--base-url").expect("publish-stress requires --base-url <url>");
@@ -620,12 +657,19 @@ fn run_publish_stress(args: &[String]) {
         },
     ));
 
-    render_preview(&placements, canvas_width, preview_size, &preview_output);
+    render_preview(
+        &placements,
+        canvas_width,
+        preview_size,
+        &preview_output,
+        &preview_avif_output,
+    );
     render_preview(
         &placements,
         canvas_width,
         medium_preview_size,
         &medium_preview_output,
+        &medium_preview_avif_output,
     );
 
     if output.exists() {
@@ -635,38 +679,80 @@ fn run_publish_stress(args: &[String]) {
     std::fs::create_dir_all(&images_output).unwrap();
     let base_url = public_base_url.trim_end_matches('/');
     let canvas_id = format!("{base_url}/canvas");
-    let mut annotations = Vec::with_capacity(placements.len());
-    for (index, (source_path, coords)) in placements.iter().enumerate() {
-        if index % 500 == 0 || index + 1 == placements.len() {
-            println!(
-                "Publishing original image {}/{}",
-                index + 1,
-                placements.len()
-            );
-        }
-        let image_name = format!("{index}.jpg");
-        std::fs::copy(source_path, images_output.join(&image_name))
-            .unwrap_or_else(|error| panic!("could not copy {}: {error}", source_path.display()));
-        let (source_width, source_height) = image::image_dimensions(source_path)
-            .unwrap_or_else(|error| panic!("could not inspect {}: {error}", source_path.display()));
-        let image_url = format!("{base_url}/images/{image_name}");
-        annotations.push(json!({
-            "id": format!("{base_url}/annotation/{index}"),
-            "type": "Annotation",
-            "motivation": "painting",
-            "target": format!(
-                "{canvas_id}#xywh={},{},{},{}",
-                coords.x, coords.y, coords.width, coords.width
-            ),
-            "body": {
-                "id": image_url,
-                "type": "Image",
-                "format": "image/jpeg",
-                "width": source_width,
-                "height": source_height,
-            },
-        }));
-    }
+    let completed = AtomicUsize::new(0);
+    let encoder_jobs = env::var("STRESS_ENCODER_JOBS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(usize::from)
+                .unwrap_or(4)
+                .div_ceil(2)
+        })
+        .clamp(1, 8);
+    let encoder_pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(encoder_jobs)
+        .stack_size(8 * 1024 * 1024)
+        .build()
+        .unwrap();
+    let annotations: Vec<_> = encoder_pool.install(|| {
+        placements
+            .par_iter()
+            .enumerate()
+            .map(|(index, (source_path, coords))| {
+                let source = square_crop(source_path);
+                let desired_edge = coords
+                    .width
+                    .saturating_mul(LEAF_PIXELS_PER_MAP_PIXEL)
+                    .clamp(MIN_LEAF_EDGE, MAX_LEAF_EDGE);
+                let output_edge = desired_edge.min(source.width());
+                let optimized = if output_edge == source.width() {
+                    source
+                } else {
+                    source.resize_exact(
+                        output_edge,
+                        output_edge,
+                        image::imageops::FilterType::Lanczos3,
+                    )
+                };
+                let pixels = optimized.to_rgba8();
+                let webp_name = format!("{index}.webp");
+                let avif_name = format!("{index}.avif");
+                save_webp(
+                    &pixels,
+                    &images_output.join(&webp_name),
+                    STRESS_WEBP_QUALITY,
+                );
+                save_avif(
+                    &pixels,
+                    &images_output.join(&avif_name),
+                    STRESS_AVIF_QUALITY,
+                );
+
+                let finished = completed.fetch_add(1, Ordering::Relaxed) + 1;
+                if finished % 500 == 0 || finished == placements.len() {
+                    println!("Publishing optimized image {finished}/{}", placements.len());
+                }
+
+                json!({
+                    "id": format!("{base_url}/annotation/{index}"),
+                    "type": "Annotation",
+                    "motivation": "painting",
+                    "target": format!(
+                        "{canvas_id}#xywh={},{},{},{}",
+                        coords.x, coords.y, coords.width, coords.width
+                    ),
+                    "body": {
+                        "id": format!("{base_url}/images/{webp_name}"),
+                        "type": "Image",
+                        "format": "image/webp",
+                        "width": output_edge,
+                        "height": output_edge,
+                    },
+                })
+            })
+            .collect()
+    });
 
     let manifest = json!({
         "@context": "http://iiif.io/api/presentation/3/context.json",

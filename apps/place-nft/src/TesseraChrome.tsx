@@ -153,16 +153,21 @@ export function TesseraHeader({
 
 export function Minimap({
     imageUrl,
+    imageAvifUrl,
     viewportRef,
     onNavigate,
 }: {
     imageUrl: string
+    imageAvifUrl?: string
     viewportRef: RefObject<HTMLDivElement | null>
     onNavigate: (event: MouseEvent<HTMLButtonElement>) => void
 }) {
     return (
         <button className="minimap" type="button" title="Minimap" onClick={onNavigate}>
-            <img className="minimap-image" src={imageUrl} alt="" aria-hidden={true} draggable={false}/>
+            <picture>
+                {imageAvifUrl ? <source type="image/avif" srcSet={imageAvifUrl}/> : null}
+                <img className="minimap-image" src={imageUrl} alt="" aria-hidden={true} draggable={false}/>
+            </picture>
             <span className="minimap-wash" aria-hidden="true"/>
             <span ref={viewportRef} className="minimap-viewport" aria-hidden="true"/>
             <span className="sr-only">Navigate the collage minimap</span>
