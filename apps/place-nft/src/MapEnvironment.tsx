@@ -114,7 +114,13 @@ void main() {
 }
 `
 
-export default function MapEnvironment() {
+export default function MapEnvironment({
+    reflectionPreviewUrl,
+    reflectionPreviewAvifUrl,
+}: {
+    reflectionPreviewUrl: string
+    reflectionPreviewAvifUrl?: string
+}) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const shaderRef = useRef<AtmosphereShader | null>(null)
     const [controlsOpen, setControlsOpen] = useState(false)
@@ -292,6 +298,19 @@ export default function MapEnvironment() {
         <>
             <div className="map-environment" style={environmentStyle} aria-hidden="true">
                 <canvas ref={canvasRef} className="map-environment__canvas"/>
+                <picture className="map-environment__reflection">
+                    {reflectionPreviewAvifUrl ? (
+                        <source type="image/avif" srcSet={reflectionPreviewAvifUrl}/>
+                    ) : null}
+                    <img
+                        src={reflectionPreviewUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        fetchPriority="low"
+                        draggable={false}
+                    />
+                </picture>
             </div>
             <div className={`atmosphere-controls ${controlsOpen ? 'atmosphere-controls--open' : ''}`}>
                 <button

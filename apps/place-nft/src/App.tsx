@@ -311,7 +311,10 @@ function TesseraMap({
     return (
         <main className="tessera-app">
             <Suspense fallback={null}>
-                <MapEnvironment/>
+                <MapEnvironment
+                    reflectionPreviewUrl={mapDefinition.mediumPreviewUrl ?? mapDefinition.previewUrl}
+                    reflectionPreviewAvifUrl={mapDefinition.mediumPreviewAvifUrl ?? mapDefinition.previewAvifUrl}
+                />
             </Suspense>
             <div
                 className={`map ${picking ? 'map--picking' : ''}`}
