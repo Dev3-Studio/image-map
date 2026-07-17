@@ -255,16 +255,19 @@ function clampCropCenter(
 
 function SquareCropEditor({
     source,
-    cropApplied,
-    moderationStatus,
-    onApply,
+    moderation,
+    demoMode,
+    onSubmit,
     onChoose,
     onInvalidate,
 }: {
     source: CropSource
-    cropApplied: boolean
-    moderationStatus: 'idle' | 'checking' | 'approved' | 'blocked' | 'error'
-    onApply: (file: File) => void | Promise<void>
+    moderation: {
+        status: 'idle' | 'checking' | 'blocked' | 'error'
+        message: string
+    }
+    demoMode: boolean
+    onSubmit: (file: File) => void | Promise<void>
     onChoose: (file: File | null) => void
     onInvalidate: () => void
 }) {
@@ -282,6 +285,7 @@ function SquareCropEditor({
     const [selection, setSelection] = useState<CropSelection>({centerX: 0.5, centerY: 0.5, zoom: 1})
     const [processing, setProcessing] = useState(false)
     const [cropError, setCropError] = useState<string | null>(null)
+    const moderationStatus = moderation.status
     const shortestEdge = Math.min(imageSize.width, imageSize.height)
     const cropSize = shortestEdge > 0 ? shortestEdge / selection.zoom : 1
     const imageStyle = imageSize.width > 0 ? {
@@ -290,7 +294,7 @@ function SquareCropEditor({
         left: `${50 - selection.centerX * imageSize.width / cropSize * 100}%`,
         top: `${50 - selection.centerY * imageSize.height / cropSize * 100}%`,
     } : undefined
-    const canApply = imageSize.width > 0 && !processing && moderationStatus !== 'checking'
+    const canSubmit = imageSize.width > 0 && !processing && moderationStatus !== 'checking'
 
     useEffect(() => {
         activeRef.current = true
@@ -440,56 +444,73 @@ function SquareCropEditor({
                         }}
                     />
                 </label>
-                <button
-                    className={`secondary-button crop-apply ${cropApplied ? 'crop-apply--done' : ''}`}
-                    type="button"
-                    disabled={!canApply || cropApplied}
-                    onClick={async () => {
-                        const cropVersion = cropVersionRef.current
-                        setProcessing(true)
-                        setCropError(null)
-                        try {
-                            const file = await createSquareCrop(source.file, selection)
-                            if (activeRef.current && cropVersionRef.current === cropVersion) {
-                                void onApply(file)
-                            }
-                        } catch {
-                            setCropError('We couldn’t create this crop. Try another image.')
-                        } finally {
+            </div>
+            {moderation.status !== 'idle' ? (
+                <div
+                    className={`upload-moderation upload-moderation--${moderation.status}`}
+                    role="status"
+                    aria-live="polite"
+                >
+                    {moderation.status === 'checking' ? (
+                        <span className="upload-moderation-spinner" aria-hidden="true"/>
+                    ) : null}
+                    <span>{moderation.message}</span>
+                </div>
+            ) : (
+                <div className="upload-moderation-note">
+                    This crop will be checked before {demoMode ? 'placing' : 'minting'}.
+                </div>
+            )}
+            <button
+                className="primary-button"
+                type="button"
+                disabled={!canSubmit}
+                onClick={async () => {
+                    const cropVersion = cropVersionRef.current
+                    setProcessing(true)
+                    setCropError(null)
+                    try {
+                        const file = await createSquareCrop(source.file, selection)
+                        if (activeRef.current && cropVersionRef.current === cropVersion) {
+                            setProcessing(false)
+                            await onSubmit(file)
+                        }
+                    } catch {
+                        setCropError('We couldn’t create this crop. Try another image.')
+                    } finally {
+                        if (activeRef.current) {
                             setProcessing(false)
                         }
-                    }}
-                >
-                    {processing
-                        ? 'Creating crop…'
-                        : moderationStatus === 'checking'
-                            ? 'Checking crop…'
-                            : cropApplied ? 'Crop applied ✓' : 'Apply crop'}
-                </button>
-            </div>
+                    }
+                }}
+            >
+                {processing
+                    ? 'Preparing crop…'
+                    : moderation.status === 'checking'
+                        ? 'Checking image…'
+                        : demoMode ? 'Place on demo canvas' : 'Mint to collage'}
+            </button>
         </div>
     )
 }
 
 export function UploadDialog({
     pickPoint,
-    previewUrl,
     moderation,
     demoMode,
-    onFile,
+    onSubmit,
     onCancel,
-    onMint,
+    onReset,
 }: {
     pickPoint: Point
-    previewUrl: string | null
     moderation: {
-        status: 'idle' | 'checking' | 'approved' | 'blocked' | 'error'
+        status: 'idle' | 'checking' | 'blocked' | 'error'
         message: string
     }
     demoMode: boolean
-    onFile: (file: File | null) => void | Promise<void>
+    onSubmit: (file: File) => void | Promise<void>
     onCancel: () => void
-    onMint: () => void
+    onReset: () => void
 }) {
     const [source, setSource] = useState<CropSource | null>(null)
 
@@ -500,7 +521,7 @@ export function UploadDialog({
     }, [source])
 
     const chooseFile = (file: File | null) => {
-        void onFile(null)
+        onReset()
         if (!file) {
             setSource(null)
             return
@@ -539,11 +560,11 @@ export function UploadDialog({
                     <SquareCropEditor
                         key={source.url}
                         source={source}
-                        cropApplied={Boolean(previewUrl) && moderation.status === 'approved'}
-                        moderationStatus={moderation.status}
-                        onApply={onFile}
+                        moderation={moderation}
+                        demoMode={demoMode}
+                        onSubmit={onSubmit}
                         onChoose={chooseFile}
-                        onInvalidate={() => void onFile(null)}
+                        onInvalidate={onReset}
                     />
                 ) : (
                     <label
@@ -571,32 +592,11 @@ export function UploadDialog({
                         />
                     </label>
                 )}
-                {moderation.status !== 'idle' ? (
-                    <div
-                        className={`upload-moderation upload-moderation--${moderation.status}`}
-                        role="status"
-                        aria-live="polite"
-                    >
-                        {moderation.status === 'checking' ? (
-                            <span className="upload-moderation-spinner" aria-hidden="true"/>
-                        ) : null}
-                        <span>{moderation.message}</span>
-                    </div>
-                ) : (
+                {!source ? (
                     <div className="upload-moderation-note">
-                        Apply your crop, then it will be checked before {demoMode ? 'placing' : 'minting'}.
+                        Choose an image, then adjust the square crop before {demoMode ? 'placing' : 'minting'}.
                     </div>
-                )}
-                <button
-                    className="primary-button"
-                    type="button"
-                    disabled={!previewUrl || moderation.status !== 'approved'}
-                    onClick={onMint}
-                >
-                    {moderation.status === 'checking'
-                        ? 'Checking crop…'
-                        : demoMode ? 'Place on demo canvas' : 'Mint to collage'}
-                </button>
+                ) : null}
             </section>
         </div>
     )

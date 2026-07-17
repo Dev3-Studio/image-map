@@ -31,7 +31,7 @@ const IIIF_ONLY_HIGH_RESOLUTION_ZOOM = 1.1
 const JUMP_TO_TILE_VIEWPORT_RATIO = 0.6
 
 type DetailLevel = 'preview' | 'medium' | 'images'
-type UploadModerationStatus = 'idle' | 'checking' | 'approved' | 'blocked' | 'error'
+type UploadModerationStatus = 'idle' | 'checking' | 'blocked' | 'error'
 
 interface Point {
     x: number
@@ -131,7 +131,6 @@ function TesseraMap({
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
     const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [uploadModeration, setUploadModeration] = useState<{
         status: UploadModerationStatus
         message: string
@@ -559,23 +558,10 @@ function TesseraMap({
             {uploadOpen ? (
                 <UploadDialog
                     pickPoint={pickPoint}
-                    previewUrl={previewUrl}
                     moderation={uploadModeration}
                     demoMode={demoMode}
-                    onFile={async (file) => {
+                    onSubmit={async (file) => {
                         moderationAbortRef.current?.abort()
-                        setPreviewUrl((currentPreviewUrl) => {
-                            if (currentPreviewUrl) {
-                                URL.revokeObjectURL(currentPreviewUrl)
-                            }
-                            return null
-                        })
-
-                        if (!file) {
-                            setUploadModeration({status: 'idle', message: ''})
-                            return
-                        }
-
                         const controller = new AbortController()
                         moderationAbortRef.current = controller
                         setUploadModeration({
@@ -597,11 +583,18 @@ function TesseraMap({
                                 return
                             }
 
-                            setPreviewUrl(URL.createObjectURL(file))
-                            setUploadModeration({
-                                status: 'approved',
-                                message: 'Image passed the safety check.',
-                            })
+                            setUploads((current) => [
+                                ...current,
+                                {
+                                    id: Date.now(),
+                                    url: URL.createObjectURL(file),
+                                    x: pickPoint.x - 120,
+                                    y: pickPoint.y - 120,
+                                    width: 240,
+                                },
+                            ])
+                            setUploadOpen(false)
+                            setUploadModeration({status: 'idle', message: ''})
                         } catch (error) {
                             if (!controller.signal.aborted) {
                                 const failureMessages: Record<string, string> = {
@@ -631,31 +624,11 @@ function TesseraMap({
                         moderationAbortRef.current?.abort()
                         moderationAbortRef.current = null
                         setUploadOpen(false)
-                        setPreviewUrl((currentPreviewUrl) => {
-                            if (currentPreviewUrl) {
-                                URL.revokeObjectURL(currentPreviewUrl)
-                            }
-                            return null
-                        })
                         setUploadModeration({status: 'idle', message: ''})
                     }}
-                    onMint={() => {
-                        if (!previewUrl || uploadModeration.status !== 'approved') {
-                            return
-                        }
-
-                        setUploads((current) => [
-                            ...current,
-                            {
-                                id: Date.now(),
-                                url: previewUrl,
-                                x: pickPoint.x - 120,
-                                y: pickPoint.y - 120,
-                                width: 240,
-                            },
-                        ])
-                        setUploadOpen(false)
-                        setPreviewUrl(null)
+                    onReset={() => {
+                        moderationAbortRef.current?.abort()
+                        moderationAbortRef.current = null
                         setUploadModeration({status: 'idle', message: ''})
                     }}
                 />

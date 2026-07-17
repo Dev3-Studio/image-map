@@ -604,19 +604,6 @@
   display: none;
 }
 
-.crop-apply {
-  flex: 1.25;
-  border-color: rgba(91, 91, 214, 0.22);
-  color: var(--accent);
-  background: rgba(91, 91, 214, 0.1);
-}
-
-.crop-apply--done {
-  border-color: rgba(31, 122, 77, 0.2);
-  color: #1f7a4d;
-  background: rgba(31, 122, 77, 0.09);
-}
-
 .upload-moderation,
 .upload-moderation-note {
   display: flex;
@@ -629,10 +616,6 @@
   font-size: 11.5px;
   line-height: 1.35;
   text-align: center;
-}
-
-.upload-moderation--approved {
-  color: #1f7a4d;
 }
 
 .upload-moderation--blocked,
