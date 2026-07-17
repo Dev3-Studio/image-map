@@ -16,7 +16,7 @@ const FAQS = [
     },
     {
         q: 'Can I change my image later?',
-        a: 'No. Tessera is a one-shot canvas: once a tile is minted, its image is final. That permanence is what makes the finished picture worth being part of.',
+        a: 'Yes. The wallet that currently owns the tile NFT can replace its image. If the NFT is transferred, image editing moves to the new owner automatically.',
     },
     {
         q: 'What image formats work?',
@@ -28,7 +28,7 @@ const FAQS = [
     },
     {
         q: 'What happens when all 10,000 tiles are claimed?',
-        a: 'The canvas is complete. The finished collage stays online for anyone to explore, and every tile remains tied to the address that minted it.',
+        a: 'The canvas is complete. It stays online for anyone to explore, and each tile remains controlled by the current owner of its NFT.',
     },
 ]
 
@@ -146,8 +146,8 @@ export default function Landing({
                         <div className="landing-step-index">STEP 3</div>
                         <h3>Mint it to the canvas</h3>
                         <p>
-                            Connect a wallet and mint. Your tile is written to the collage permanently, with your
-                            address on record as its owner.
+                            Connect a wallet and mint. The NFT in your wallet controls who can update that tile,
+                            even after it is transferred.
                         </p>
                     </article>
                 </div>

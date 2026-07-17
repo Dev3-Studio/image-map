@@ -1,12 +1,6 @@
-import {useMemo, type ReactNode} from 'react'
-import {BaseWalletMultiButton, WalletModalProvider} from '@solana/wallet-adapter-react-ui'
-import {mplCandyMachine} from '@metaplex-foundation/mpl-candy-machine'
-import {createUmi} from '@metaplex-foundation/umi-bundle-defaults'
-import {ConnectionProvider, useWallet, WalletProvider} from '@solana/wallet-adapter-react'
-import {walletAdapterIdentity} from '@metaplex-foundation/umi-signer-wallet-adapters'
-import {clusterApiUrl} from '@solana/web3.js'
-import useFetchCandyMachine from './hooks/useFetchCandyMachine'
-import '@solana/wallet-adapter-react-ui/styles.css'
+import {type ReactNode} from 'react'
+import SolanaWalletButton from './SolanaWalletButton.tsx'
+import type {TileClaim} from './nftClaims.ts'
 import './ImageOverlay.css'
 
 interface ImageOverlayProps {
@@ -15,16 +9,20 @@ interface ImageOverlayProps {
     title: string
     tileCount: number
     demoMode: boolean
+    claim: TileClaim | null
     onClick: () => void
 }
 
-const endpoint = import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet')
+function compactAddress(address: string) {
+    return `${address.slice(0, 4)}…${address.slice(-4)}`
+}
 
 function ImageOverlayPanel({
     imageUrl,
     imageAvifUrl,
     title,
     tileCount,
+    claim,
     onClick,
     walletAction,
 }: ImageOverlayProps & {walletAction: ReactNode}) {
@@ -44,9 +42,14 @@ function ImageOverlayPanel({
                 <h1>{title}</h1>
                 <div className="overlay-owner">
                     <span>Owner</span>
-                    <code>0x123…9fe</code>
+                    <code>{claim?.owner ? compactAddress(claim.owner) : claim?.claimed ? 'Resolving…' : 'Unclaimed'}</code>
                 </div>
-                <p>Minted to the Tessera collage · Jan 12, 2026. One of {tileCount.toLocaleString()} tiles.</p>
+                <p>
+                    {claim?.claimedAt
+                        ? `Minted to the Tessera collage · ${new Date(claim.claimedAt).toLocaleDateString()}. `
+                        : 'One available piece of the Tessera collage. '}
+                    One of {tileCount.toLocaleString()} tiles.
+                </p>
             </div>
             <div className="overlay-wallet-action">
                 {walletAction}
@@ -56,31 +59,10 @@ function ImageOverlayPanel({
 }
 
 function ImageOverlayContent(props: ImageOverlayProps) {
-    const wallet = useWallet()
-    const umi = useMemo(
-        () => createUmi(import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet'), {commitment: 'confirmed'})
-            .use(walletAdapterIdentity(wallet))
-            .use(mplCandyMachine()),
-        [wallet],
-    )
-    useFetchCandyMachine({umi})
-
     return (
         <ImageOverlayPanel
             {...props}
-            walletAction={(
-                <BaseWalletMultiButton
-                    labels={{
-                        'change-wallet': 'Change wallet',
-                        connecting: 'Connecting…',
-                        'copy-address': 'Copy address',
-                        copied: 'Copied',
-                        disconnect: 'Disconnect',
-                        'has-wallet': 'Connect',
-                        'no-wallet': 'Select wallet',
-                    }}
-                />
-            )}
+            walletAction={<SolanaWalletButton/>}
         />
     )
 }
@@ -100,15 +82,7 @@ function ImageOverlay(props: ImageOverlayProps) {
         )
     }
 
-    return (
-        <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={[]} autoConnect>
-                <WalletModalProvider>
-                    <ImageOverlayContent {...props}/>
-                </WalletModalProvider>
-            </WalletProvider>
-        </ConnectionProvider>
-    )
+    return <ImageOverlayContent {...props}/>
 }
 
 export default ImageOverlay

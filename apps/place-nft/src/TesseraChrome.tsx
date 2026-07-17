@@ -1,11 +1,6 @@
-import {useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent, type RefObject} from 'react'
+import {useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent, type ReactNode, type RefObject} from 'react'
 import {createSquareCrop, type CropSelection} from './imageCrop.ts'
 import './TesseraChrome.css'
-
-interface Point {
-    x: number
-    y: number
-}
 
 export function TesseraHeader({
     activeTileIndex,
@@ -257,6 +252,8 @@ function SquareCropEditor({
     source,
     moderation,
     demoMode,
+    action,
+    walletAction,
     onSubmit,
     onChoose,
     onInvalidate,
@@ -267,6 +264,8 @@ function SquareCropEditor({
         message: string
     }
     demoMode: boolean
+    action: 'claim' | 'edit' | 'place'
+    walletAction?: ReactNode
     onSubmit: (file: File) => void | Promise<void>
     onChoose: (file: File | null) => void
     onInvalidate: () => void
@@ -444,6 +443,7 @@ function SquareCropEditor({
                         }}
                     />
                 </label>
+                {walletAction}
             </div>
             {moderation.status !== 'idle' ? (
                 <div
@@ -488,26 +488,32 @@ function SquareCropEditor({
                     ? 'Preparing crop…'
                     : moderation.status === 'checking'
                         ? 'Checking image…'
-                        : demoMode ? 'Place on demo canvas' : 'Mint to collage'}
+                        : action === 'place'
+                            ? 'Place on demo canvas'
+                            : action === 'edit' ? 'Update tile image' : 'Mint tile NFT'}
             </button>
         </div>
     )
 }
 
 export function UploadDialog({
-    pickPoint,
     moderation,
     demoMode,
+    action,
+    tileIndex,
+    walletAction,
     onSubmit,
     onCancel,
     onReset,
 }: {
-    pickPoint: Point
     moderation: {
         status: 'idle' | 'checking' | 'blocked' | 'error'
         message: string
     }
     demoMode: boolean
+    action: 'claim' | 'edit' | 'place'
+    tileIndex: number
+    walletAction?: ReactNode
     onSubmit: (file: File) => void | Promise<void>
     onCancel: () => void
     onReset: () => void
@@ -541,7 +547,7 @@ export function UploadDialog({
             >
                 <div className="upload-heading">
                     <h2 id="upload-title">
-                        {source ? 'Adjust square crop' : `Add at ${Math.round(pickPoint.x / 30)} · ${Math.round(pickPoint.y / 30)}`}
+                        {source ? 'Adjust square crop' : `${action === 'edit' ? 'Edit' : 'Add'} tile #${tileIndex}`}
                     </h2>
                     <button className="round-button" type="button" aria-label="Close upload" onClick={onCancel}>
                         <svg width="10" height="10" viewBox="0 0 11 11" aria-hidden="true">
@@ -562,6 +568,8 @@ export function UploadDialog({
                         source={source}
                         moderation={moderation}
                         demoMode={demoMode}
+                        action={action}
+                        walletAction={walletAction}
                         onSubmit={onSubmit}
                         onChoose={chooseFile}
                         onInvalidate={onReset}

@@ -10,6 +10,8 @@ import type {IIIFMapDefinition} from './iiifManifest.ts'
 import {useMapDefinition} from './hooks/useMapDefinition.ts'
 import {moderateImage} from './imageModeration.ts'
 import Landing from './Landing.tsx'
+import type {TileClaim} from './nftClaims.ts'
+import {useSolanaWallet} from './solanaWalletContext.ts'
 import Toolbar from './Toolbar.tsx'
 import {
     Minimap,
@@ -20,6 +22,8 @@ import {
 
 const ImageOverlay = lazy(() => import('./ImageOverlay.tsx'))
 const MapEnvironment = lazy(() => import('./MapEnvironment.tsx'))
+const SolanaProvider = lazy(() => import('./SolanaProvider.tsx'))
+const SolanaWalletButton = lazy(() => import('./SolanaWalletButton.tsx'))
 
 const COLLAGE_PATH = '/collage'
 const MIN_SCALE = 0.04
@@ -40,8 +44,10 @@ interface Point {
 
 interface UploadedTile extends Point {
     id: number
+    tileIndex: number
     url: string
     width: number
+    height: number
 }
 
 interface ViewportState {
@@ -111,6 +117,7 @@ function TesseraMap({
     manifestReady: boolean
     demoMode: boolean
 }) {
+    const wallet = useSolanaWallet()
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
     const pointerDownRef = useRef<Point | null>(null)
     const zoomLabelRef = useRef<HTMLSpanElement | null>(null)
@@ -120,9 +127,11 @@ function TesseraMap({
     const selectionMarkerRef = useRef<HTMLDivElement | null>(null)
     const locationUpdateTimeoutRef = useRef<number | null>(null)
     const moderationAbortRef = useRef<AbortController | null>(null)
+    const pendingMintsRef = useRef(new Map<number, {mint: string, transaction: string}>())
     const activeTileIndexRef = useRef<number | null>(null)
     const [activeTileIndex, setActiveTileIndex] = useState<number | null>(null)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+    const [selectedClaim, setSelectedClaim] = useState<TileClaim | null>(null)
     const [searchError, setSearchError] = useState<string | null>(null)
     const [guidanceVisible, setGuidanceVisible] = useState(true)
     const [usesTouchGestures] = useState(() => window.matchMedia('(pointer: coarse)').matches)
@@ -130,7 +139,8 @@ function TesseraMap({
     const [mediumPreviewRequested, setMediumPreviewRequested] = useState(false)
     const [picking, setPicking] = useState(false)
     const [uploadOpen, setUploadOpen] = useState(false)
-    const [pickPoint, setPickPoint] = useState<Point>({x: 0, y: 0})
+    const [uploadTileIndex, setUploadTileIndex] = useState<number | null>(null)
+    const [uploadAction, setUploadAction] = useState<'claim' | 'edit' | 'place'>(demoMode ? 'place' : 'claim')
     const [uploadModeration, setUploadModeration] = useState<{
         status: UploadModerationStatus
         message: string
@@ -280,14 +290,6 @@ function TesseraMap({
             y: (event.clientY - state.positionY) / state.scale,
         }
 
-        if (picking) {
-            setPickPoint(point)
-            setPicking(false)
-            setUploadModeration({status: 'idle', message: ''})
-            setUploadOpen(true)
-            return
-        }
-
         for (let index = 0; index < coordsList.length; index += 1) {
             const coords = coordsList[index]
             if (
@@ -296,9 +298,41 @@ function TesseraMap({
                 point.y > coords.y &&
                 point.y < coords.y + coords.height
             ) {
+                if (picking) {
+                    setUploadTileIndex(index)
+                    setUploadAction(demoMode ? 'place' : 'claim')
+                    setPicking(false)
+                    setUploadModeration({status: 'idle', message: ''})
+                    setUploadOpen(true)
+
+                    if (!demoMode && import.meta.env.VITE_CLAIMS_API_URL) {
+                        void import('./nftClaims.ts').then(({getTileClaim}) => getTileClaim(index)).then((claim) => {
+                            if (!claim.claimed) {
+                                return
+                            }
+                            setUploadAction('edit')
+                            if (claim.owner && claim.owner !== wallet?.publicKey?.toBase58()) {
+                                setUploadModeration({
+                                    status: 'error',
+                                    message: 'This tile can only be edited by the wallet that currently owns its NFT.',
+                                })
+                            }
+                        }).catch(() => undefined)
+                    }
+                    return
+                }
+
                 activeTileIndexRef.current = index
                 setActiveTileIndex(index)
                 setSelectedImageIndex(index)
+                setSelectedClaim(null)
+                if (!demoMode && import.meta.env.VITE_CLAIMS_API_URL) {
+                    void import('./nftClaims.ts').then(({getTileClaim}) => getTileClaim(index)).then((claim) => {
+                        if (activeTileIndexRef.current === index) {
+                            setSelectedClaim(claim)
+                        }
+                    }).catch(() => undefined)
+                }
                 const wrapper = transformRef.current?.instance.wrapperComponent
                 if (wrapper) {
                     updateLocation(index, state, wrapper, 'push')
@@ -464,7 +498,7 @@ function TesseraMap({
                                         left: upload.x,
                                         top: upload.y,
                                         width: upload.width,
-                                        height: upload.width,
+                                        height: upload.height,
                                     }}
                                 />
                             ))}
@@ -548,21 +582,28 @@ function TesseraMap({
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
                 <Suspense fallback={null}>
                     <ImageOverlay
-                        imageUrl={coordsList[selectedImageIndex].thumbnail ?? mapDefinition.previewUrl}
+                        imageUrl={selectedClaim?.imageUrl ?? coordsList[selectedImageIndex].thumbnail ?? mapDefinition.previewUrl}
                         imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
                         title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
                         tileCount={coordsList.length}
                         demoMode={demoMode}
+                        claim={selectedClaim}
                         onClick={() => setSelectedImageIndex(null)}
                     />
                 </Suspense>
             ) : null}
 
-            {uploadOpen ? (
+            {uploadOpen && uploadTileIndex !== null ? (
                 <UploadDialog
-                    pickPoint={pickPoint}
                     moderation={uploadModeration}
                     demoMode={demoMode}
+                    action={uploadAction}
+                    tileIndex={uploadTileIndex}
+                    walletAction={!demoMode ? (
+                        <Suspense fallback={null}>
+                            <SolanaWalletButton/>
+                        </Suspense>
+                    ) : undefined}
                     onSubmit={async (file) => {
                         moderationAbortRef.current?.abort()
                         const controller = new AbortController()
@@ -586,16 +627,56 @@ function TesseraMap({
                                 return
                             }
 
+                            let claim: TileClaim | null = null
+                            if (!demoMode) {
+                                if (!wallet?.connected || !wallet.publicKey || !wallet.signMessage) {
+                                    throw new Error('WALLET_REQUIRED')
+                                }
+                                const claims = await import('./nftClaims.ts')
+                                const currentClaim = await claims.getTileClaim(uploadTileIndex)
+                                if (currentClaim.claimed) {
+                                    if (currentClaim.owner !== wallet.publicKey.toBase58()) {
+                                        throw new Error('NFT_OWNERSHIP_REQUIRED')
+                                    }
+                                    setUploadAction('edit')
+                                    setUploadModeration({status: 'checking', message: 'Updating your tile…'})
+                                    claim = await claims.updateTileImage(uploadTileIndex, wallet, file)
+                                } else {
+                                    setUploadModeration({status: 'checking', message: 'Reserving this tile…'})
+                                    await claims.reserveTile(uploadTileIndex, wallet)
+                                    let mint = pendingMintsRef.current.get(uploadTileIndex)
+                                    if (!mint) {
+                                        setUploadModeration({status: 'checking', message: 'Approve the NFT mint in your wallet…'})
+                                        mint = await claims.mintTileNft(wallet)
+                                        pendingMintsRef.current.set(uploadTileIndex, mint)
+                                    }
+                                    setUploadModeration({status: 'checking', message: 'Confirming your tile on the collage…'})
+                                    claim = await claims.finalizeTileClaim(
+                                        uploadTileIndex,
+                                        wallet,
+                                        mint.mint,
+                                        mint.transaction,
+                                        file,
+                                    )
+                                    pendingMintsRef.current.delete(uploadTileIndex)
+                                }
+                            }
+
+                            const coords = coordsList[uploadTileIndex]
+                            const imageUrl = URL.createObjectURL(file)
                             setUploads((current) => [
-                                ...current,
+                                ...current.filter((upload) => upload.tileIndex !== uploadTileIndex),
                                 {
                                     id: Date.now(),
-                                    url: URL.createObjectURL(file),
-                                    x: pickPoint.x - 120,
-                                    y: pickPoint.y - 120,
-                                    width: 240,
+                                    tileIndex: uploadTileIndex,
+                                    url: imageUrl,
+                                    x: coords.x,
+                                    y: coords.y,
+                                    width: coords.width,
+                                    height: coords.height ?? coords.width,
                                 },
                             ])
+                            setSelectedClaim(claim)
                             setUploadOpen(false)
                             setUploadModeration({status: 'idle', message: ''})
                         } catch (error) {
@@ -610,6 +691,16 @@ function TesseraMap({
                                     invalid_response: 'Image moderation returned an invalid response. Try again shortly.',
                                     timeout: 'Image moderation timed out. Try again.',
                                     network: 'The moderation service could not be reached. Try again shortly.',
+                                    CLAIMS_NOT_CONFIGURED: 'Tile claims are not configured on this deployment.',
+                                    CANDY_MACHINE_NOT_CONFIGURED: 'The Tessera Candy Machine is not configured.',
+                                    CANDY_MACHINE_SOLD_OUT: 'All Tessera tile NFTs have been minted.',
+                                    IMAGE_TOO_LARGE: 'This crop is too large to upload. Choose a smaller image.',
+                                    INVALID_CANDY_MACHINE_MINT: 'The mint could not be verified. Your tile reservation is still active; try again.',
+                                    NFT_OWNERSHIP_REQUIRED: 'Connect the wallet that currently owns this tile NFT to edit its image.',
+                                    RESERVATION_EXPIRED: 'The tile reservation expired before confirmation. Try again.',
+                                    TILE_UNAVAILABLE: 'Another wallet is already claiming this tile. Pick another one.',
+                                    WALLET_REQUIRED: 'Connect a wallet before minting this tile.',
+                                    WALLET_SIGNATURE_UNAVAILABLE: 'This wallet does not support the message signatures required for tile claims.',
                                 }
                                 setUploadModeration({
                                     status: 'error',
@@ -628,6 +719,7 @@ function TesseraMap({
                         moderationAbortRef.current?.abort()
                         moderationAbortRef.current = null
                         setUploadOpen(false)
+                        setUploadTileIndex(null)
                         setUploadModeration({status: 'idle', message: ''})
                     }}
                     onReset={() => {
@@ -710,13 +802,27 @@ function App() {
         )
     }
 
-    return (
+    const map = (
         <TesseraMap
             key={mapState.generationId}
             mapDefinition={mapState.definition}
             manifestReady={mapState.manifestReady}
             demoMode={demoMode}
         />
+    )
+
+    if (demoMode) {
+        return map
+    }
+
+    return (
+        <Suspense fallback={(
+            <main className="tessera-app map-loading" aria-busy="true">
+                <img src={preview.previewUrl} alt="Connecting to Solana"/>
+            </main>
+        )}>
+            <SolanaProvider>{map}</SolanaProvider>
+        </Suspense>
     )
 }
 
