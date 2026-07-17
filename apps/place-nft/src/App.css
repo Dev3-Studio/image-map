@@ -12,6 +12,10 @@
   overflow: hidden;
 }
 
+.tessera-app {
+  background: linear-gradient(180deg, #fbfcff 0%, #eef3fa 100%);
+}
+
 .map-loading img {
   width: 100%;
   height: 100%;
@@ -19,6 +23,8 @@
 }
 
 .map {
+  z-index: 1;
+  background: transparent;
   cursor: grab;
 }
 
@@ -47,6 +53,27 @@
   height: 768px;
 }
 
+.collage-canvas {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: #fff;
+  isolation: isolate;
+}
+
+.collage-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: 16px;
+  box-shadow: 0 24px 72px rgba(42, 58, 90, 0.2), 0 4px 18px rgba(42, 58, 90, 0.12);
+  outline: 1.5px solid rgba(255, 255, 255, 0.96);
+  opacity: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
 .collage-medium {
   position: absolute;
   inset: 0;
@@ -63,6 +90,7 @@
 
 .map .transformWrapper {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   max-width: none;

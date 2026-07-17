@@ -19,6 +19,7 @@ import {
 } from './TesseraChrome.tsx'
 
 const ImageOverlay = lazy(() => import('./ImageOverlay.tsx'))
+const MapEnvironment = lazy(() => import('./MapEnvironment.tsx'))
 
 const COLLAGE_PATH = '/collage'
 const MIN_SCALE = 0.04
@@ -111,6 +112,8 @@ function TesseraMap({
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
     const pointerDownRef = useRef<Point | null>(null)
     const zoomLabelRef = useRef<HTMLSpanElement | null>(null)
+    const collageCanvasRef = useRef<HTMLDivElement | null>(null)
+    const collageFrameRef = useRef<HTMLDivElement | null>(null)
     const minimapViewportRef = useRef<HTMLDivElement | null>(null)
     const selectionMarkerRef = useRef<HTMLDivElement | null>(null)
     const locationUpdateTimeoutRef = useRef<number | null>(null)
@@ -306,6 +309,9 @@ function TesseraMap({
 
     return (
         <main className="tessera-app">
+            <Suspense fallback={null}>
+                <MapEnvironment/>
+            </Suspense>
             <div
                 className={`map ${picking ? 'map--picking' : ''}`}
                 onClick={handleMapClick}
@@ -315,6 +321,7 @@ function TesseraMap({
                     pointerDownRef.current = {x: event.clientX, y: event.clientY}
                 }}
             >
+                <div ref={collageFrameRef} className="collage-frame" aria-hidden="true"/>
                 <TransformWrapper
                     ref={transformRef}
                     limitToBounds={false}
@@ -348,6 +355,17 @@ function TesseraMap({
 
                         if (zoomLabelRef.current) {
                             zoomLabelRef.current.textContent = `${Math.round(scale * 100)}%`
+                        }
+
+                        if (collageCanvasRef.current) {
+                            collageCanvasRef.current.style.borderRadius = `${16 / scale}px`
+                        }
+
+                        if (collageFrameRef.current) {
+                            collageFrameRef.current.style.width = `${mapDefinition.width * scale}px`
+                            collageFrameRef.current.style.height = `${mapDefinition.height * scale}px`
+                            collageFrameRef.current.style.transform = `translate3d(${positionX}px, ${positionY}px, 0)`
+                            collageFrameRef.current.style.opacity = '1'
                         }
 
                         if (minimapViewportRef.current) {
@@ -388,59 +406,65 @@ function TesseraMap({
                     }}
                 >
                     <TransformComponent wrapperClass="transformWrapper" contentClass="transformComponent">
-                        <picture
-                            className="collage-picture"
-                            data-lod={detailLevel}
+                        <div
+                            ref={collageCanvasRef}
+                            className="collage-canvas"
                             style={{width: mapDefinition.width, height: mapDefinition.height}}
                         >
-                            {mapDefinition.previewAvifUrl ? (
-                                <source type="image/avif" srcSet={mapDefinition.previewAvifUrl}/>
-                            ) : null}
-                            <img
-                                src={mapDefinition.previewUrl}
-                                alt="Tessera collage map"
-                                id="collage"
-                                fetchPriority="high"
-                                draggable={false}
+                            <picture
+                                className="collage-picture"
+                                data-lod={detailLevel}
                                 style={{width: mapDefinition.width, height: mapDefinition.height}}
-                            />
-                        </picture>
-                        {mapDefinition.mediumPreviewUrl && mediumPreviewRequested ? (
-                            <picture>
-                                {mapDefinition.mediumPreviewAvifUrl ? (
-                                    <source type="image/avif" srcSet={mapDefinition.mediumPreviewAvifUrl}/>
+                            >
+                                {mapDefinition.previewAvifUrl ? (
+                                    <source type="image/avif" srcSet={mapDefinition.previewAvifUrl}/>
                                 ) : null}
                                 <img
-                                    className={`collage-medium ${detailLevel !== 'preview' ? 'collage-medium--visible' : ''}`}
-                                    src={mapDefinition.mediumPreviewUrl}
-                                    alt=""
-                                    aria-hidden={true}
-                                    decoding="async"
+                                    src={mapDefinition.previewUrl}
+                                    alt="Tessera collage map"
+                                    id="collage"
+                                    fetchPriority="high"
                                     draggable={false}
                                     style={{width: mapDefinition.width, height: mapDefinition.height}}
                                 />
                             </picture>
-                        ) : null}
-                        <IIIFImageLayer
-                            visible={detailLevel === 'images'}
-                            placements={mapDefinition.placements}
-                            manifestReady={manifestReady}
-                        />
-                        {uploads.map((upload) => (
-                            <img
-                                key={upload.id}
-                                className="uploaded-tile"
-                                src={upload.url}
-                                alt="Your upload"
-                                draggable={false}
-                                style={{
-                                    left: upload.x,
-                                    top: upload.y,
-                                    width: upload.width,
-                                    height: upload.width,
-                                }}
+                            {mapDefinition.mediumPreviewUrl && mediumPreviewRequested ? (
+                                <picture>
+                                    {mapDefinition.mediumPreviewAvifUrl ? (
+                                        <source type="image/avif" srcSet={mapDefinition.mediumPreviewAvifUrl}/>
+                                    ) : null}
+                                    <img
+                                        className={`collage-medium ${detailLevel !== 'preview' ? 'collage-medium--visible' : ''}`}
+                                        src={mapDefinition.mediumPreviewUrl}
+                                        alt=""
+                                        aria-hidden={true}
+                                        decoding="async"
+                                        draggable={false}
+                                        style={{width: mapDefinition.width, height: mapDefinition.height}}
+                                    />
+                                </picture>
+                            ) : null}
+                            <IIIFImageLayer
+                                visible={detailLevel === 'images'}
+                                placements={mapDefinition.placements}
+                                manifestReady={manifestReady}
                             />
-                        ))}
+                            {uploads.map((upload) => (
+                                <img
+                                    key={upload.id}
+                                    className="uploaded-tile"
+                                    src={upload.url}
+                                    alt="Your upload"
+                                    draggable={false}
+                                    style={{
+                                        left: upload.x,
+                                        top: upload.y,
+                                        width: upload.width,
+                                        height: upload.width,
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </TransformComponent>
                     {!picking && !uploadOpen ? (
                         <Toolbar

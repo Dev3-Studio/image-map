@@ -1,0 +1,105 @@
+.map-environment {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.98) 0 24%, transparent 58%),
+    linear-gradient(180deg, #fbfcff 0%, #f0f4fa 100%);
+  pointer-events: none;
+}
+
+.map-environment::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 48%, transparent 42%, rgba(191, 204, 226, 0.16) 100%);
+  content: '';
+  pointer-events: none;
+}
+
+.map-environment__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.map-environment__fallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.map-environment__canvas[hidden] + .map-environment__fallback {
+  display: block;
+}
+
+.map-environment__shape {
+  position: absolute;
+  display: block;
+  filter: drop-shadow(0 18px 24px rgba(83, 102, 135, 0.12));
+  animation: environment-float 9s ease-in-out infinite alternate;
+}
+
+.map-environment__shape--sphere {
+  top: 16%;
+  left: 9%;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #f8f7ff 0 8%, #c8c5ff 48%, #aaa7ed 100%);
+}
+
+.map-environment__shape--ring {
+  top: 15%;
+  right: 8%;
+  width: 96px;
+  height: 96px;
+  border: 16px solid #a8e2f6;
+  border-radius: 50%;
+  transform: rotateX(58deg) rotateZ(24deg);
+  animation-delay: -2s;
+}
+
+.map-environment__shape--capsule {
+  bottom: 12%;
+  left: 10%;
+  width: 58px;
+  height: 124px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff1d5, #ffc875);
+  transform: rotate(48deg);
+  animation-delay: -5s;
+}
+
+.map-environment__shape--gem {
+  right: 10%;
+  bottom: 14%;
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #e7fff7, #9fdcc9);
+  transform: rotate(45deg);
+  animation-delay: -7s;
+}
+
+@keyframes environment-float {
+  to {
+    translate: 0 -10px;
+  }
+}
+
+@media (max-width: 639px) {
+  .map-environment__canvas {
+    transform: scale(1.08);
+  }
+
+  .map-environment__shape {
+    scale: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-environment__shape {
+    animation: none;
+  }
+}
