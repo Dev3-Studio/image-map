@@ -16,6 +16,7 @@ interface AtmosphereSettings {
     frost: number
     tint: number
     depth: number
+    fog: number
 }
 
 interface AtmosphereShader {
@@ -24,6 +25,7 @@ interface AtmosphereShader {
         uFrost: {value: number}
         uTint: {value: number}
         uDepth: {value: number}
+        uFog: {value: number}
     }
     render: () => void
 }
@@ -34,6 +36,7 @@ const DEFAULT_SETTINGS: AtmosphereSettings = {
     frost: 0.08,
     tint: 0.12,
     depth: 0.2,
+    fog: 0.14,
 }
 const CONTROLS: Array<{
     key: keyof AtmosphereSettings
@@ -44,6 +47,7 @@ const CONTROLS: Array<{
     {key: 'frost', label: 'Frost', description: 'Diffusion and surface texture'},
     {key: 'tint', label: 'Cool tint', description: 'Blue-lavender color cast'},
     {key: 'depth', label: 'Depth', description: 'Edge shading behind the canvas'},
+    {key: 'fog', label: 'Fog', description: 'Soft ambient haze around the canvas'},
 ]
 
 const vertexShader = `
@@ -62,6 +66,7 @@ uniform float uReflection;
 uniform float uFrost;
 uniform float uTint;
 uniform float uDepth;
+uniform float uFog;
 uniform vec2 uPointer;
 varying vec2 vUv;
 
@@ -97,6 +102,10 @@ void main() {
     color += sheen * uReflection * vec3(0.22, 0.24, 0.3);
     color = mix(color, vec3(0.975, 0.982, 1.0), uFrost * 0.22);
     color += uTint * vec3(-0.055, -0.02, 0.09);
+    float fogDrift = sin(glassUv.x * 2.4 + uTime * 0.022) * 0.055
+        + sin(glassUv.y * 3.1 - uTime * 0.018) * 0.035;
+    float fogDensity = smoothstep(0.08, 1.0, 0.78 - glassUv.y + ambientLight * 0.24 + fogDrift);
+    color = mix(color, vec3(0.955, 0.968, 0.992), uFog * (0.18 + fogDensity * 0.5));
     color += (random(gl_FragCoord.xy) - 0.5) * (0.002 + uFrost * 0.024);
     color = clamp(color, 0.0, 1.0);
 
@@ -128,6 +137,7 @@ export default function MapEnvironment() {
                 frost: savedValue('frost'),
                 tint: savedValue('tint'),
                 depth: savedValue('depth'),
+                fog: savedValue('fog'),
             }
         } catch {
             return DEFAULT_SETTINGS
@@ -148,6 +158,7 @@ export default function MapEnvironment() {
             shader.uniforms.uFrost.value = settings.frost
             shader.uniforms.uTint.value = settings.tint
             shader.uniforms.uDepth.value = settings.depth
+            shader.uniforms.uFog.value = settings.fog
             shader.render()
         }
     }, [settings])
@@ -182,6 +193,7 @@ export default function MapEnvironment() {
             uFrost: {value: initialSettingsRef.current.frost},
             uTint: {value: initialSettingsRef.current.tint},
             uDepth: {value: initialSettingsRef.current.depth},
+            uFog: {value: initialSettingsRef.current.fog},
         }
         const material = new ShaderMaterial({
             uniforms,
@@ -273,6 +285,7 @@ export default function MapEnvironment() {
         '--atmosphere-frost': settings.frost,
         '--atmosphere-tint': settings.tint,
         '--atmosphere-depth': settings.depth,
+        '--atmosphere-fog': settings.fog,
     } as CSSProperties
 
     return (

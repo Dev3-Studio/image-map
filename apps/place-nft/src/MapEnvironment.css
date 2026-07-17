@@ -3,6 +3,7 @@
   --atmosphere-frost: 0.08;
   --atmosphere-tint: 0.12;
   --atmosphere-depth: 0.2;
+  --atmosphere-fog: 0.14;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -38,6 +39,12 @@
 .map-environment::after {
   z-index: 2;
   background:
+    linear-gradient(
+      to top,
+      rgb(225 235 250 / calc(var(--atmosphere-fog) * 0.7)),
+      rgb(242 247 255 / calc(var(--atmosphere-fog) * 0.22)) 48%,
+      transparent 82%
+    ),
     radial-gradient(
       ellipse at 50% 48%,
       transparent 42%,
