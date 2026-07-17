@@ -1,26 +1,31 @@
 import {useMemo} from 'react'
-import {BaseWalletMultiButton} from '@solana/wallet-adapter-react-ui'
+import {BaseWalletMultiButton, WalletModalProvider} from '@solana/wallet-adapter-react-ui'
 import {mplCandyMachine} from '@metaplex-foundation/mpl-candy-machine'
 import {createUmi} from '@metaplex-foundation/umi-bundle-defaults'
-import {useWallet} from '@solana/wallet-adapter-react'
+import {ConnectionProvider, useWallet, WalletProvider} from '@solana/wallet-adapter-react'
 import {walletAdapterIdentity} from '@metaplex-foundation/umi-signer-wallet-adapters'
 import {clusterApiUrl} from '@solana/web3.js'
 import useFetchCandyMachine from './hooks/useFetchCandyMachine'
+import '@solana/wallet-adapter-react-ui/styles.css'
 import './ImageOverlay.css'
 
-function ImageOverlay({
-    imageUrl,
-    imageAvifUrl,
-    title,
-    tileCount,
-    onClick,
-}: {
+interface ImageOverlayProps {
     imageUrl: string
     imageAvifUrl?: string
     title: string
     tileCount: number
     onClick: () => void
-}) {
+}
+
+const endpoint = import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet')
+
+function ImageOverlayContent({
+    imageUrl,
+    imageAvifUrl,
+    title,
+    tileCount,
+    onClick,
+}: ImageOverlayProps) {
     const wallet = useWallet()
     const umi = useMemo(
         () => createUmi(import.meta.env.VITE_SOL_DEV_ENDPOINT ?? clusterApiUrl('devnet'), {commitment: 'confirmed'})
@@ -64,6 +69,18 @@ function ImageOverlay({
                 />
             </div>
         </aside>
+    )
+}
+
+function ImageOverlay(props: ImageOverlayProps) {
+    return (
+        <ConnectionProvider endpoint={endpoint}>
+            <WalletProvider wallets={[]} autoConnect>
+                <WalletModalProvider>
+                    <ImageOverlayContent {...props}/>
+                </WalletModalProvider>
+            </WalletProvider>
+        </ConnectionProvider>
     )
 }
 

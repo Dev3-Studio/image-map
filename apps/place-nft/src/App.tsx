@@ -1,12 +1,11 @@
 import './App.css'
-import {useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent} from 'react'
+import {lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent} from 'react'
 import {
     TransformComponent,
     TransformWrapper,
     type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
 import coordsjson from './assets/coords.json'
-import ImageOverlay from './ImageOverlay.tsx'
 import IIIFImageLayer from './IIIFImageLayer.tsx'
 import {loadIIIFManifest, type IIIFMapDefinition} from './iiifManifest.ts'
 import {
@@ -21,6 +20,8 @@ import {
     TesseraHeader,
     UploadDialog,
 } from './TesseraChrome.tsx'
+
+const ImageOverlay = lazy(() => import('./ImageOverlay.tsx'))
 
 const FALLBACK_MAP_SIZE = 768
 const MIN_SCALE = 0.04
@@ -510,13 +511,15 @@ function TesseraMap({
             ) : null}
 
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
-                <ImageOverlay
-                    imageUrl={coordsList[selectedImageIndex].thumbnail ?? '/collage.webp'}
-                    imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
-                    title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
-                    tileCount={coordsList.length}
-                    onClick={() => setSelectedImageIndex(null)}
-                />
+                <Suspense fallback={null}>
+                    <ImageOverlay
+                        imageUrl={coordsList[selectedImageIndex].thumbnail ?? '/collage.webp'}
+                        imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
+                        title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
+                        tileCount={coordsList.length}
+                        onClick={() => setSelectedImageIndex(null)}
+                    />
+                </Suspense>
             ) : null}
 
             {uploadOpen ? (
