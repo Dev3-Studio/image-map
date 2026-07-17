@@ -49,11 +49,37 @@ export class CollageGenerationStack extends cdk.Stack {
             R2_SECRET_ACCESS_KEY: r2SecretAccessKey.valueAsString,
         }
 
+        const solanaRpcEndpoint = new cdk.CfnParameter(this, 'SolanaRpcEndpoint', {
+            type: 'String',
+            default: 'https://api.devnet.solana.com',
+            description: 'Solana JSON-RPC endpoint used to verify mints and current NFT ownership.',
+        })
+        const candyMachineId = new cdk.CfnParameter(this, 'CandyMachineId', {
+            type: 'String',
+            description: 'Candy Machine allowed to mint Tessera tile NFTs.',
+        })
+        const openAiApiKey = new cdk.CfnParameter(this, 'OpenAiApiKey', {
+            type: 'String',
+            noEcho: true,
+            description: 'OpenAI API key used to re-run image moderation at the persistence boundary.',
+        })
+        const webAppOrigin = new cdk.CfnParameter(this, 'WebAppOrigin', {
+            type: 'String',
+            default: 'http://localhost:4200',
+            description: 'Allowed browser origin for the public tile claims API.',
+        })
+
         const jobsTable = new dynamodb.Table(this, 'JobsTable', {
             partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
             stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
             timeToLiveAttribute: 'expiresAt',
+            removalPolicy: cdk.RemovalPolicy.RETAIN,
+        })
+        const claimsTable = new dynamodb.Table(this, 'ClaimsTable', {
+            partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
+            billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+            pointInTimeRecoverySpecification: {pointInTimeRecoveryEnabled: true},
             removalPolicy: cdk.RemovalPolicy.RETAIN,
         })
 
@@ -100,6 +126,37 @@ export class CollageGenerationStack extends cdk.Stack {
         }))
         const functionUrl = apiHandler.addFunctionUrl({
             authType: lambda.FunctionUrlAuthType.AWS_IAM,
+        })
+
+        const claimsHandler = new lambda.Function(this, 'ClaimsApiHandler', {
+            code: handlerCode,
+            handler: 'dist/handlers/claims.handler',
+            runtime: lambda.Runtime.NODEJS_24_X,
+            memorySize: 512,
+            timeout: cdk.Duration.seconds(30),
+            environment: {
+                ...r2Environment,
+                CANDY_MACHINE_ID: candyMachineId.valueAsString,
+                CLAIMS_TABLE_NAME: claimsTable.tableName,
+                OPENAI_API_KEY: openAiApiKey.valueAsString,
+                R2_PUBLIC_BASE_URL: r2PublicBaseUrl.valueAsString,
+                SOLANA_RPC_ENDPOINT: solanaRpcEndpoint.valueAsString,
+                WEB_APP_ORIGIN: webAppOrigin.valueAsString,
+            },
+        })
+        claimsTable.grantReadWriteData(claimsHandler)
+        claimsHandler.addToRolePolicy(new iam.PolicyStatement({
+            actions: ['s3:PutObject'],
+            resources: [`arn:aws:s3:::${r2BucketName.valueAsString}/tiles/*`],
+        }))
+        const claimsFunctionUrl = claimsHandler.addFunctionUrl({
+            authType: lambda.FunctionUrlAuthType.NONE,
+            cors: {
+                allowedHeaders: ['content-type'],
+                allowedMethods: [lambda.HttpMethod.GET, lambda.HttpMethod.POST, lambda.HttpMethod.PUT],
+                allowedOrigins: [webAppOrigin.valueAsString],
+                maxAge: cdk.Duration.hours(1),
+            },
         })
 
         const dispatcher = new lambda.Function(this, 'JobDispatcher', {
@@ -166,6 +223,8 @@ export class CollageGenerationStack extends cdk.Stack {
         })
 
         new cdk.CfnOutput(this, 'RegenerationFunctionUrl', {value: functionUrl.url})
+        new cdk.CfnOutput(this, 'ClaimsFunctionUrl', {value: claimsFunctionUrl.url})
+        new cdk.CfnOutput(this, 'ClaimsTable', {value: claimsTable.tableName})
         new cdk.CfnOutput(this, 'R2Bucket', {value: r2BucketName.valueAsString})
         new cdk.CfnOutput(this, 'ReleaseBaseUrl', {value: r2PublicBaseUrl.valueAsString})
     }
