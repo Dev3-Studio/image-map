@@ -1,28 +1,57 @@
 import {useEffect, useRef} from 'react'
 import {
-    ACESFilmicToneMapping,
-    CapsuleGeometry,
-    CircleGeometry,
-    Color,
-    DirectionalLight,
-    Fog,
-    GridHelper,
-    Group,
-    HemisphereLight,
-    type Material,
     Mesh,
-    MeshBasicMaterial,
-    MeshStandardMaterial,
-    OctahedronGeometry,
-    PerspectiveCamera,
+    OrthographicCamera,
     PlaneGeometry,
     Scene,
+    ShaderMaterial,
     SRGBColorSpace,
-    SphereGeometry,
-    TorusGeometry,
+    Vector2,
     WebGLRenderer,
 } from 'three'
 import './MapEnvironment.css'
+
+const vertexShader = `
+varying vec2 vUv;
+
+void main() {
+    vUv = uv;
+    gl_Position = vec4(position, 1.0);
+}
+`
+
+const fragmentShader = `
+uniform float uTime;
+uniform float uAspect;
+uniform vec2 uPointer;
+varying vec2 vUv;
+
+float random(vec2 position) {
+    return fract(sin(dot(position, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+    float drift = sin(uTime * 0.08) * 0.012;
+    vec2 center = vec2(
+        0.5 + uPointer.x * 0.025 + drift,
+        0.46 - uPointer.y * 0.018
+    );
+    vec2 distanceFromCenter = (vUv - center) * vec2(uAspect, 1.0);
+    float ambientLight = exp(-dot(distanceFromCenter, distanceFromCenter) * 0.34);
+    float verticalFade = smoothstep(0.0, 1.0, vUv.y);
+    float edgeShade = smoothstep(0.28, 0.82, length(distanceFromCenter));
+
+    vec3 lowerColor = vec3(0.925, 0.945, 0.975);
+    vec3 upperColor = vec3(0.992, 0.994, 1.0);
+    vec3 color = mix(lowerColor, upperColor, verticalFade);
+    color += ambientLight * vec3(0.022, 0.025, 0.038);
+    color -= edgeShade * vec3(0.012, 0.014, 0.018);
+    color += (random(gl_FragCoord.xy) - 0.5) / 255.0;
+
+    gl_FragColor = vec4(color, 1.0);
+    #include <colorspace_fragment>
+}
+`
 
 export default function MapEnvironment() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -37,8 +66,8 @@ export default function MapEnvironment() {
         try {
             renderer = new WebGLRenderer({
                 canvas,
-                antialias: true,
-                powerPreference: 'high-performance',
+                antialias: false,
+                powerPreference: 'low-power',
             })
         } catch {
             canvas.hidden = true
@@ -46,95 +75,26 @@ export default function MapEnvironment() {
         }
 
         renderer.outputColorSpace = SRGBColorSpace
-        renderer.toneMapping = ACESFilmicToneMapping
-        renderer.toneMappingExposure = 1.08
 
         const scene = new Scene()
-        scene.background = new Color(0xf8f9fd)
-        scene.fog = new Fog(0xf8f9fd, 12, 28)
-
-        const camera = new PerspectiveCamera(32, 1, 0.1, 50)
-        camera.position.set(0, 0.8, 13)
-        camera.lookAt(0, 0, 0)
-
-        scene.add(new HemisphereLight(0xffffff, 0xdce4f4, 2.6))
-        const keyLight = new DirectionalLight(0xffffff, 3.2)
-        keyLight.position.set(-4, 8, 7)
-        scene.add(keyLight)
-
-        const floor = new Mesh(
-            new PlaneGeometry(42, 32),
-            new MeshStandardMaterial({color: 0xf1f4fa, roughness: 0.94}),
-        )
-        floor.rotation.x = -Math.PI / 2
-        floor.position.set(0, -2.85, -1)
-        scene.add(floor)
-
-        const grid = new GridHelper(42, 42, 0xcbd4e4, 0xdfe5ef)
-        grid.position.y = -2.82
-        const gridMaterial = grid.material as Material
-        gridMaterial.transparent = true
-        gridMaterial.opacity = 0.2
-        scene.add(grid)
-
-        const backdrop = new Mesh(
-            new CircleGeometry(4.7, 64),
-            new MeshBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.72,
-                depthWrite: false,
-            }),
-        )
-        backdrop.position.set(0, 0.45, -4.5)
-        scene.add(backdrop)
-
-        const decor = new Group()
-        scene.add(decor)
-
-        const lavenderMaterial = new MeshStandardMaterial({
-            color: 0xbab7ff,
-            roughness: 0.42,
-            metalness: 0.02,
+        const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
+        const uniforms = {
+            uTime: {value: 0},
+            uAspect: {value: 1},
+            uPointer: {value: new Vector2()},
+        }
+        const material = new ShaderMaterial({
+            uniforms,
+            vertexShader,
+            fragmentShader,
+            depthTest: false,
+            depthWrite: false,
         })
-        const blueMaterial = new MeshStandardMaterial({
-            color: 0x9fdff5,
-            roughness: 0.38,
-            metalness: 0.02,
-        })
-        const warmMaterial = new MeshStandardMaterial({
-            color: 0xffdca8,
-            roughness: 0.5,
-            metalness: 0,
-        })
-        const mintMaterial = new MeshStandardMaterial({
-            color: 0xb9eadb,
-            roughness: 0.44,
-            metalness: 0,
-        })
+        const atmosphere = new Mesh(new PlaneGeometry(2, 2), material)
+        scene.add(atmosphere)
 
-        const sphere = new Mesh(new SphereGeometry(0.92, 32, 24), lavenderMaterial)
-        sphere.position.set(-5.15, 2.35, -1.8)
-        decor.add(sphere)
-
-        const torus = new Mesh(new TorusGeometry(0.92, 0.16, 20, 64), blueMaterial)
-        torus.position.set(5.1, 2.15, -1.4)
-        torus.rotation.set(0.4, -0.3, 0.45)
-        decor.add(torus)
-
-        const capsule = new Mesh(new CapsuleGeometry(0.42, 1.25, 8, 20), warmMaterial)
-        capsule.position.set(-5.35, -1.05, -0.5)
-        capsule.rotation.set(0.2, 0.1, -0.72)
-        decor.add(capsule)
-
-        const gem = new Mesh(new OctahedronGeometry(0.72, 1), mintMaterial)
-        gem.position.set(5.15, -1.15, -0.7)
-        gem.rotation.set(0.3, 0.5, 0.2)
-        decor.add(gem)
-
+        const pointerTarget = new Vector2()
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        let pointerX = 0
-        let pointerY = 0
         let animationFrame: number | null = null
         let lastFrame = 0
 
@@ -144,10 +104,9 @@ export default function MapEnvironment() {
                 return
             }
 
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
             renderer.setSize(width, height, false)
-            camera.aspect = width / height
-            camera.updateProjectionMatrix()
+            uniforms.uAspect.value = width / height
             renderer.render(scene, camera)
         }
 
@@ -156,24 +115,21 @@ export default function MapEnvironment() {
         resize()
 
         const handlePointerMove = (event: PointerEvent) => {
-            pointerX = event.clientX / window.innerWidth - 0.5
-            pointerY = event.clientY / window.innerHeight - 0.5
+            pointerTarget.set(
+                event.clientX / window.innerWidth - 0.5,
+                event.clientY / window.innerHeight - 0.5,
+            )
         }
 
         const renderFrame = (time: number) => {
             animationFrame = window.requestAnimationFrame(renderFrame)
-            if (time - lastFrame < 1000 / 30) {
+            if (time - lastFrame < 1000 / 24) {
                 return
             }
             lastFrame = time
 
-            const seconds = time / 1000
-            decor.rotation.y += (pointerX * 0.09 - decor.rotation.y) * 0.035
-            decor.rotation.x += (-pointerY * 0.05 - decor.rotation.x) * 0.035
-            sphere.position.y = 2.35 + Math.sin(seconds * 0.42) * 0.1
-            torus.rotation.z = 0.45 + Math.sin(seconds * 0.28) * 0.12
-            capsule.position.y = -1.05 + Math.sin(seconds * 0.36 + 1.7) * 0.08
-            gem.rotation.y = 0.5 + seconds * 0.06
+            uniforms.uTime.value = time / 1000
+            uniforms.uPointer.value.lerp(pointerTarget, 0.035)
             renderer.render(scene, camera)
         }
 
@@ -199,15 +155,8 @@ export default function MapEnvironment() {
             window.removeEventListener('pointermove', handlePointerMove)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             resizeObserver.disconnect()
-            scene.traverse((object) => {
-                if (object instanceof Mesh) {
-                    object.geometry.dispose()
-                    const materials = Array.isArray(object.material) ? object.material : [object.material]
-                    materials.forEach((material) => material.dispose())
-                }
-            })
-            grid.geometry.dispose()
-            gridMaterial.dispose()
+            atmosphere.geometry.dispose()
+            material.dispose()
             renderer.dispose()
             renderer.forceContextLoss()
         }
@@ -216,12 +165,6 @@ export default function MapEnvironment() {
     return (
         <div className="map-environment" aria-hidden="true">
             <canvas ref={canvasRef} className="map-environment__canvas"/>
-            <div className="map-environment__fallback">
-                <span className="map-environment__shape map-environment__shape--sphere"/>
-                <span className="map-environment__shape map-environment__shape--ring"/>
-                <span className="map-environment__shape map-environment__shape--capsule"/>
-                <span className="map-environment__shape map-environment__shape--gem"/>
-            </div>
         </div>
     )
 }
