@@ -1,12 +1,14 @@
 # Collage generation infrastructure
 
-This package deploys the asynchronous Tessera release pipeline while keeping all large objects in the existing Cloudflare R2 bucket:
+This package deploys the asynchronous Tessera release pipeline and the NFT-backed tile claims API while keeping all large objects in the existing Cloudflare R2 bucket:
 
 ```text
 IAM Lambda Function URL -> DynamoDB stream -> FIFO SQS -> Rust Lambda -> R2
 ```
 
 The function URL is for a trusted AWS caller and requires SigV4/IAM authentication. Browser code only reads the public R2 release pointer. Removing API Gateway, the project-data S3 buckets, and CloudFront avoids those services' application storage and request charges; Lambda, DynamoDB, SQS, ECR, CloudWatch, and R2 still remain subject to their own free-tier limits. CDK also uses its small bootstrap S3 bucket for deployment artifacts, and Lambda container images must remain in ECR.
+
+The separate claims function URL is public because wallets call it directly. Mutations require short-lived Ed25519 message signatures. Claim finalization also verifies the configured Candy Machine transaction, and image edits resolve the mint's current owner from Solana before writing a new immutable R2 revision.
 
 ## R2 setup
 
@@ -37,16 +39,19 @@ The CDK environment must be bootstrapped and Docker must be able to build `linux
 ```powershell
 $env:R2_ACCESS_KEY_ID = Read-Host 'R2 access key ID'
 $env:R2_SECRET_ACCESS_KEY = Read-Host 'R2 secret access key'
+$env:OPENAI_API_KEY = Read-Host 'OpenAI API key'
+$env:CANDY_MACHINE_ID = Read-Host 'Candy Machine address'
 
 pnpm nx build collage-generation-infra
-pnpm nx synth collage-generation-infra -- --parameters "R2AccessKeyId=$env:R2_ACCESS_KEY_ID" --parameters "R2SecretAccessKey=$env:R2_SECRET_ACCESS_KEY"
-pnpm nx deploy collage-generation-infra -- --parameters "R2AccessKeyId=$env:R2_ACCESS_KEY_ID" --parameters "R2SecretAccessKey=$env:R2_SECRET_ACCESS_KEY"
+pnpm nx synth collage-generation-infra -- --parameters "R2AccessKeyId=$env:R2_ACCESS_KEY_ID" --parameters "R2SecretAccessKey=$env:R2_SECRET_ACCESS_KEY" --parameters "OpenAiApiKey=$env:OPENAI_API_KEY" --parameters "CandyMachineId=$env:CANDY_MACHINE_ID"
+pnpm nx deploy collage-generation-infra -- --parameters "R2AccessKeyId=$env:R2_ACCESS_KEY_ID" --parameters "R2SecretAccessKey=$env:R2_SECRET_ACCESS_KEY" --parameters "OpenAiApiKey=$env:OPENAI_API_KEY" --parameters "CandyMachineId=$env:CANDY_MACHINE_ID"
 ```
 
-Override `R2Endpoint`, `R2BucketName`, or `R2PublicBaseUrl` with additional `--parameters Name=value` arguments if the bucket changes. The stack outputs the IAM-protected function URL and the public release base URL. Configure the frontend with:
+Override `R2Endpoint`, `R2BucketName`, `R2PublicBaseUrl`, `SolanaRpcEndpoint`, or `WebAppOrigin` with additional `--parameters Name=value` arguments when those values change. The stack outputs the IAM-protected regeneration URL, the public claims URL, and the release base URL. Configure the frontend with:
 
 ```text
 VITE_COLLAGE_RELEASE_BASE_URL=https://pub-78666f1dd7984ef69f57781fac523d68.r2.dev
+VITE_CLAIMS_API_URL=https://your-claims-function.lambda-url.region.on.aws
 ```
 
 ## Submit a snapshot

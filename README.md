@@ -50,11 +50,23 @@ Open `/collage?demo=upload` or use the **Try demo · no wallet** action on the l
 
 ## Upload moderation
 
-Images selected in the upload dialog are resized in the browser and sent to the server-only `/api/moderate-image` Vercel Function. The function uses OpenAI's `omni-moderation-latest` image classifier and only approves the preview when the sexual-content category is clear. Moderation failures are fail-closed, so an image cannot reach the mint action unless the check succeeds.
+Images selected in the upload dialog are resized in the browser and sent to the server-only `/api/moderate-image` Vercel Function. The function uses OpenAI's `omni-moderation-latest` image classifier and only approves the preview when the sexual-content category is clear. Moderation failures are fail-closed, so an image cannot reach the mint action unless the check succeeds. The claims API repeats the same check before any image is written to R2, so browser state is never the persistence authorization boundary.
 
 Set `OPENAI_API_KEY` in the Vercel project's environment variables. Keep it server-only; never use a `VITE_` prefix or commit it to an environment file. Use `vercel dev` when testing the moderation function locally because the standalone Vite development server does not run files in `/api`.
 
-The current mint action is a local prototype and does not persist uploads. When permanent upload storage is added, the storage/finalize endpoint must repeat or cryptographically bind this server-side moderation decision before writing to R2; a browser approval alone is not an authorization boundary.
+## NFT tile ownership
+
+Production claims use the configured Metaplex Candy Machine. The browser first creates a short-lived, wallet-signed reservation, mints a standard NFT to that wallet, then finalizes the tile-to-mint record through the claims API. DynamoDB enforces one claim per tile, and immutable image revisions are stored under `tiles/{tileIndex}/{mint}/{revision}.webp` in R2.
+
+The wallet address saved during minting is not used as ongoing edit authority. On every image update, the claims API resolves the NFT's current token-account owner from Solana and requires a fresh message signature from that wallet. Transferring the NFT therefore transfers upload and edit access automatically.
+
+Configure the frontend with the `ClaimsFunctionUrl` stack output and use the same Candy Machine and Solana cluster on both sides:
+
+```text
+VITE_CANDY_MACHINE_ID=...
+VITE_CLAIMS_API_URL=https://....lambda-url....on.aws
+VITE_SOL_DEV_ENDPOINT=https://api.devnet.solana.com
+```
 
 ## Serverless collage releases
 
