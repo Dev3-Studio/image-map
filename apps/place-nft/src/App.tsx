@@ -344,10 +344,19 @@ function TesseraMap({
                         if (minimapViewportRef.current) {
                             const minimapSize = minimapViewportRef.current.parentElement?.clientWidth
                                 ?? (window.innerWidth < 640 ? 84 : 148)
-                            const left = Math.max(0, Math.min(minimapSize - 8, (-positionX / scale / mapDefinition.width) * minimapSize))
-                            const top = Math.max(0, Math.min(minimapSize - 8, (-positionY / scale / mapDefinition.height) * minimapSize))
-                            const width = Math.max(8, Math.min(minimapSize, (window.innerWidth / scale / mapDefinition.width) * minimapSize))
-                            const height = Math.max(8, Math.min(minimapSize, (window.innerHeight / scale / mapDefinition.height) * minimapSize))
+                            const wrapper = ref.instance.wrapperComponent
+                            const rawWidth = ((wrapper?.clientWidth ?? window.innerWidth) / scale / mapDefinition.width) * minimapSize
+                            const rawHeight = ((wrapper?.clientHeight ?? window.innerHeight) / scale / mapDefinition.height) * minimapSize
+                            const rawLeft = (-positionX / scale / mapDefinition.width) * minimapSize
+                            const rawTop = (-positionY / scale / mapDefinition.height) * minimapSize
+                            const markerWidth = Math.max(8, rawWidth)
+                            const markerHeight = Math.max(8, rawHeight)
+                            const markerLeft = rawLeft - (markerWidth - rawWidth) / 2
+                            const markerTop = rawTop - (markerHeight - rawHeight) / 2
+                            const left = Math.max(0, Math.min(minimapSize, markerLeft))
+                            const top = Math.max(0, Math.min(minimapSize, markerTop))
+                            const width = Math.max(0, Math.min(minimapSize, markerLeft + markerWidth) - left)
+                            const height = Math.max(0, Math.min(minimapSize, markerTop + markerHeight) - top)
                             minimapViewportRef.current.style.transform = `translate3d(${left}px, ${top}px, 0)`
                             minimapViewportRef.current.style.width = `${width}px`
                             minimapViewportRef.current.style.height = `${height}px`
