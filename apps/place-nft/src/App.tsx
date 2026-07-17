@@ -42,6 +42,9 @@ interface UploadedTile extends Point {
     id: number
     url: string
     width: number
+    title: string
+    description: string
+    link: string
 }
 
 interface ViewportState {
@@ -123,6 +126,7 @@ function TesseraMap({
     const activeTileIndexRef = useRef<number | null>(null)
     const [activeTileIndex, setActiveTileIndex] = useState<number | null>(null)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+    const [selectedUploadId, setSelectedUploadId] = useState<number | null>(null)
     const [searchError, setSearchError] = useState<string | null>(null)
     const [guidanceVisible, setGuidanceVisible] = useState(true)
     const [usesTouchGestures] = useState(() => window.matchMedia('(pointer: coarse)').matches)
@@ -190,6 +194,7 @@ function TesseraMap({
         activeTileIndexRef.current = index
         setActiveTileIndex(index)
         setSelectedImageIndex(null)
+        setSelectedUploadId(null)
         setSearchError(null)
         if (historyMode) {
             updateLocation(index, nextViewport, wrapper, historyMode)
@@ -207,6 +212,7 @@ function TesseraMap({
         const {tileIndex, viewport, error} = getLocationState(coordsList)
         setSearchError(error)
         setSelectedImageIndex(null)
+        setSelectedUploadId(null)
 
         if (tileIndex !== null) {
             focusTile(tileIndex, null, viewport, transformOverride)
@@ -299,6 +305,7 @@ function TesseraMap({
                 activeTileIndexRef.current = index
                 setActiveTileIndex(index)
                 setSelectedImageIndex(index)
+                setSelectedUploadId(null)
                 const wrapper = transformRef.current?.instance.wrapperComponent
                 if (wrapper) {
                     updateLocation(index, state, wrapper, 'push')
@@ -307,6 +314,10 @@ function TesseraMap({
             }
         }
     }
+
+    const selectedUpload = selectedUploadId === null
+        ? null
+        : uploads.find((upload) => upload.id === selectedUploadId) ?? null
 
     return (
         <main className="tessera-app">
@@ -458,8 +469,15 @@ function TesseraMap({
                                     key={upload.id}
                                     className="uploaded-tile"
                                     src={upload.url}
-                                    alt="Your upload"
+                                    alt={upload.title}
                                     draggable={false}
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        activeTileIndexRef.current = null
+                                        setActiveTileIndex(null)
+                                        setSelectedImageIndex(null)
+                                        setSelectedUploadId(upload.id)
+                                    }}
                                     style={{
                                         left: upload.x,
                                         top: upload.y,
@@ -477,6 +495,7 @@ function TesseraMap({
                             onStartPick={() => {
                                 setPicking(true)
                                 setSelectedImageIndex(null)
+                                setSelectedUploadId(null)
                             }}
                         />
                     ) : null}
@@ -548,12 +567,35 @@ function TesseraMap({
             {selectedImageIndex !== null && !picking && !uploadOpen ? (
                 <Suspense fallback={null}>
                     <ImageOverlay
+                        key={`tile-${selectedImageIndex}`}
                         imageUrl={coordsList[selectedImageIndex].thumbnail ?? mapDefinition.previewUrl}
                         imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
                         title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
                         tileCount={coordsList.length}
                         demoMode={demoMode}
                         onClick={() => setSelectedImageIndex(null)}
+                    />
+                </Suspense>
+            ) : null}
+
+            {selectedUpload && !picking && !uploadOpen ? (
+                <Suspense fallback={null}>
+                    <ImageOverlay
+                        key={`upload-${selectedUpload.id}`}
+                        imageUrl={selectedUpload.url}
+                        title={selectedUpload.title}
+                        description={selectedUpload.description}
+                        link={selectedUpload.link}
+                        owner="You · local"
+                        caption={`Placed in this browser session · One of ${coordsList.length.toLocaleString()} canvas tiles.`}
+                        tileCount={coordsList.length}
+                        demoMode={demoMode}
+                        canEdit
+                        onSaveDetails={(details) => {
+                            setUploads((current) => current.map((upload) =>
+                                upload.id === selectedUpload.id ? {...upload, ...details} : upload))
+                        }}
+                        onClick={() => setSelectedUploadId(null)}
                     />
                 </Suspense>
             ) : null}
@@ -586,16 +628,21 @@ function TesseraMap({
                                 return
                             }
 
+                            const uploadId = Date.now()
                             setUploads((current) => [
                                 ...current,
                                 {
-                                    id: Date.now(),
+                                    id: uploadId,
                                     url: URL.createObjectURL(file),
                                     x: pickPoint.x - 120,
                                     y: pickPoint.y - 120,
                                     width: 240,
+                                    title: 'Untitled tile',
+                                    description: '',
+                                    link: '',
                                 },
                             ])
+                            setSelectedUploadId(uploadId)
                             setUploadOpen(false)
                             setUploadModeration({status: 'idle', message: ''})
                         } catch (error) {

@@ -75,17 +75,164 @@
   font: 600 12px/1.35 ui-monospace, Menlo, Consolas, monospace;
 }
 
-.overlay-copy p {
+.overlay-description,
+.overlay-caption {
   margin: 6px 0 0;
   color: rgba(28, 39, 51, 0.7);
   font-size: 13px;
   line-height: 1.55;
 }
 
-.overlay-wallet-action {
+.overlay-caption {
+  color: rgba(28, 39, 51, 0.52);
+  font-size: 11.5px;
+}
+
+.overlay-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid rgba(91, 91, 214, 0.18);
+  border-radius: 13px;
+  color: #4949bd;
+  background: rgba(91, 91, 214, 0.08);
+  font-size: 12.5px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background 180ms ease, border-color 180ms ease, transform 220ms var(--spring);
+}
+
+.overlay-link:hover {
+  border-color: rgba(91, 91, 214, 0.34);
+  background: rgba(91, 91, 214, 0.13);
+  transform: translateY(-1px);
+}
+
+.overlay-link svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
+}
+
+.overlay-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid rgba(28, 39, 51, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.52);
+  animation: panel-item-in 300ms var(--ease-out) both;
+}
+
+.overlay-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.overlay-editor label > span {
+  color: rgba(28, 39, 51, 0.62);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.overlay-editor input,
+.overlay-editor textarea {
   width: 100%;
+  border: 1px solid rgba(28, 39, 51, 0.13);
+  border-radius: 11px;
+  outline: none;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.76);
+  font: 500 12.5px/1.4 'Instrument Sans', system-ui, sans-serif;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.overlay-editor input {
+  height: 38px;
+  padding: 0 11px;
+}
+
+.overlay-editor textarea {
+  min-height: 82px;
+  padding: 9px 11px;
+  resize: vertical;
+}
+
+.overlay-editor input:focus,
+.overlay-editor textarea:focus {
+  border-color: rgba(91, 91, 214, 0.55);
+  box-shadow: 0 0 0 3px rgba(91, 91, 214, 0.1);
+}
+
+.overlay-editor-error {
+  color: #b42318;
+  font-size: 11.5px;
+}
+
+.overlay-editor-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 8px;
+}
+
+.overlay-secondary-button,
+.overlay-primary-button,
+.overlay-edit-button {
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  transition: filter 180ms ease, transform 220ms var(--spring), opacity 180ms ease;
+}
+
+.overlay-secondary-button,
+.overlay-edit-button {
+  border: 1px solid rgba(28, 39, 51, 0.14);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.overlay-primary-button {
+  border: 0;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 5px 16px rgba(91, 91, 214, 0.28);
+}
+
+.overlay-secondary-button:hover,
+.overlay-primary-button:hover:not(:disabled),
+.overlay-edit-button:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.overlay-primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.overlay-actions {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 9px;
   margin-top: auto;
   animation: panel-item-in 450ms 240ms var(--ease-out) both;
+}
+
+.overlay-edit-button,
+.overlay-wallet-action {
+  width: 100%;
 }
 
 .overlay-wallet-action .wallet-adapter-dropdown {
