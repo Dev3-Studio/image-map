@@ -105,9 +105,11 @@ function updateLocation(
 function TesseraMap({
     mapDefinition,
     manifestReady,
+    demoMode,
 }: {
     mapDefinition: IIIFMapDefinition
     manifestReady: boolean
+    demoMode: boolean
 }) {
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null)
     const pointerDownRef = useRef<Point | null>(null)
@@ -469,6 +471,7 @@ function TesseraMap({
                     {!picking && !uploadOpen ? (
                         <Toolbar
                             zoomLabelRef={zoomLabelRef}
+                            demoMode={demoMode}
                             onStartPick={() => {
                                 setPicking(true)
                                 setSelectedImageIndex(null)
@@ -500,6 +503,7 @@ function TesseraMap({
                 <TesseraHeader
                     key={`header-${activeTileIndex ?? 'none'}`}
                     activeTileIndex={activeTileIndex}
+                    demoMode={demoMode}
                     externalError={searchError}
                     tileCount={coordsList.length}
                     onClearError={() => setSearchError(null)}
@@ -546,6 +550,7 @@ function TesseraMap({
                         imageAvifUrl={coordsList[selectedImageIndex].sources?.avif}
                         title={`Tile #${String(selectedImageIndex).padStart(4, '0')}`}
                         tileCount={coordsList.length}
+                        demoMode={demoMode}
                         onClick={() => setSelectedImageIndex(null)}
                     />
                 </Suspense>
@@ -556,6 +561,7 @@ function TesseraMap({
                     pickPoint={pickPoint}
                     previewUrl={previewUrl}
                     moderation={uploadModeration}
+                    demoMode={demoMode}
                     onFile={async (file) => {
                         moderationAbortRef.current?.abort()
                         setPreviewUrl((currentPreviewUrl) => {
@@ -678,19 +684,24 @@ function App() {
     }, [])
 
     const collageHref = useShowcase ? `${COLLAGE_PATH}?demo=showcase` : COLLAGE_PATH
+    const demoHref = useShowcase ? collageHref : `${COLLAGE_PATH}?demo=upload`
+    const demo = new URLSearchParams(window.location.search).get('demo')
+    const demoMode = demo === 'upload' || demo === 'showcase'
 
     if (route === 'landing') {
         return (
             <Landing
                 preview={preview}
                 collageHref={collageHref}
+                demoHref={demoHref}
                 onOpenCollage={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
                         return
                     }
 
                     event.preventDefault()
-                    window.history.pushState(null, '', collageHref)
+                    const nextUrl = new URL(event.currentTarget.href)
+                    window.history.pushState(null, '', `${nextUrl.pathname}${nextUrl.search}`)
                     setRoute('map')
                 }}
             />
@@ -715,6 +726,7 @@ function App() {
             key={mapState.generationId}
             mapDefinition={mapState.definition}
             manifestReady={mapState.manifestReady}
+            demoMode={demoMode}
         />
     )
 }

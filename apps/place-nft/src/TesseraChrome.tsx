@@ -8,12 +8,14 @@ interface Point {
 
 export function TesseraHeader({
     activeTileIndex,
+    demoMode,
     externalError,
     tileCount,
     onClearError,
     onSearch,
 }: {
     activeTileIndex: number | null
+    demoMode: boolean
     externalError: string | null
     tileCount: number
     onClearError: () => void
@@ -72,6 +74,7 @@ export function TesseraHeader({
             <div className="glass-surface brand-capsule">
                 <span className="brand-mark" aria-hidden="true"/>
                 <span className="brand-wordmark">Tessera</span>
+                {demoMode ? <span className="demo-mode-badge">Demo</span> : null}
             </div>
             <form
                 className="glass-surface glow-surface search-capsule"
@@ -231,6 +234,7 @@ export function UploadDialog({
     pickPoint,
     previewUrl,
     moderation,
+    demoMode,
     onFile,
     onCancel,
     onMint,
@@ -241,6 +245,7 @@ export function UploadDialog({
         status: 'idle' | 'checking' | 'approved' | 'blocked' | 'error'
         message: string
     }
+    demoMode: boolean
     onFile: (file: File | null) => void
     onCancel: () => void
     onMint: () => void
@@ -264,6 +269,12 @@ export function UploadDialog({
                         </svg>
                     </button>
                 </div>
+                {demoMode ? (
+                    <div className="upload-demo-notice">
+                        <span aria-hidden="true"/>
+                        No wallet required · resets when you refresh
+                    </div>
+                ) : null}
                 <label
                     className={`upload-dropzone ${previewUrl ? 'upload-dropzone--preview' : ''}`}
                     onDragOver={(event: DragEvent<HTMLLabelElement>) => event.preventDefault()}
@@ -307,7 +318,7 @@ export function UploadDialog({
                     </div>
                 ) : (
                     <div className="upload-moderation-note">
-                        Images are checked for explicit content before minting.
+                        Images are checked for explicit content before {demoMode ? 'placing' : 'minting'}.
                     </div>
                 )}
                 <button
@@ -316,7 +327,9 @@ export function UploadDialog({
                     disabled={!previewUrl || moderation.status !== 'approved'}
                     onClick={onMint}
                 >
-                    {moderation.status === 'checking' ? 'Checking image…' : 'Mint to collage'}
+                    {moderation.status === 'checking'
+                        ? 'Checking image…'
+                        : demoMode ? 'Place on demo canvas' : 'Mint to collage'}
                 </button>
             </section>
         </div>

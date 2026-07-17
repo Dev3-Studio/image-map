@@ -44,6 +44,10 @@ pnpm nx -- run collage-maker:run
 pnpm nx -- synth collage-generation-infra
 ```
 
+## Wallet-free demo
+
+Open `/collage?demo=upload` or use the **Try demo · no wallet** action on the landing page. Demo placements still pass upload moderation, but they stay in the current browser session and reset on refresh. Location links preserve the demo query parameter, and tile details do not initialize or prompt for a wallet while the mode is active.
+
 ## Upload moderation
 
 Images selected in the upload dialog are resized in the browser and sent to the server-only `/api/moderate-image` Vercel Function. The function uses OpenAI's `omni-moderation-latest` image classifier and only approves the preview when the sexual-content category is clear. Moderation failures are fail-closed, so an image cannot reach the mint action unless the check succeeds.

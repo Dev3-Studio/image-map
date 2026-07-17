@@ -24,7 +24,7 @@ const FAQS = [
     },
     {
         q: 'Do I need a wallet to explore?',
-        a: 'No. Anyone can pan, zoom, and search the collage freely. A wallet is only needed at the final step, when you mint a tile of your own.',
+        a: 'No. Anyone can pan, zoom, and search the collage freely. Demo mode also lets you place an image without connecting a wallet.',
     },
     {
         q: 'What happens when all 10,000 tiles are claimed?',
@@ -44,10 +44,12 @@ function ArrowIcon() {
 export default function Landing({
     preview,
     collageHref,
+    demoHref,
     onOpenCollage,
 }: {
     preview: MapPreviewSources
     collageHref: string
+    demoHref: string
     onOpenCollage: (event: MouseEvent<HTMLAnchorElement>) => void
 }) {
     const [openFaq, setOpenFaq] = useState(-1)
@@ -94,7 +96,9 @@ export default function Landing({
                                 Explore the collage
                                 <ArrowIcon/>
                             </a>
-                            <a className="landing-ghost-button" href="#how">How it works</a>
+                            <a className="landing-ghost-button" href={demoHref} onClick={onOpenCollage}>
+                                Try demo · no wallet
+                            </a>
                         </div>
                     </div>
                 </div>

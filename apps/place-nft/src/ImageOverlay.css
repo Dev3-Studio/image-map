@@ -92,6 +92,29 @@
   width: 100%;
 }
 
+.overlay-demo-mode {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border: 1px solid rgba(91, 91, 214, 0.18);
+  border-radius: 999px;
+  color: #4949bd;
+  background: rgba(91, 91, 214, 0.1);
+  font-size: 12px;
+}
+
+.overlay-demo-mode strong {
+  font-size: 12.5px;
+}
+
+.overlay-demo-mode span {
+  color: rgba(73, 73, 189, 0.72);
+}
+
 #imageOverlay .wallet-adapter-dropdown-list:not(.wallet-adapter-dropdown-list-active) {
   display: none;
 }

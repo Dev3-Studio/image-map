@@ -4,9 +4,11 @@ import './Toolbar.css'
 
 function Toolbar({
     zoomLabelRef,
+    demoMode,
     onStartPick,
 }: {
     zoomLabelRef: RefObject<HTMLSpanElement | null>
+    demoMode: boolean
     onStartPick: () => void
 }) {
     const {zoomIn, zoomOut, resetTransform} = useControls()
@@ -45,7 +47,13 @@ function Toolbar({
                 </svg>
             </button>
             <span className="toolbar-divider"/>
-            <button className="upload-button" type="button" aria-label="Add your image" title="Add your image" onClick={onStartPick}>
+            <button
+                className="upload-button"
+                type="button"
+                aria-label={demoMode ? 'Add a demo image' : 'Add your image'}
+                title={demoMode ? 'Add a demo image — no wallet required' : 'Add your image'}
+                onClick={onStartPick}
+            >
                 <svg width="15" height="15" viewBox="0 0 14 14" aria-hidden="true">
                     <path d="M7 10V2.5"/>
                     <path d="M3.8 5.2 7 2l3.2 3.2"/>
