@@ -2,6 +2,7 @@ const MODERATION_MAX_EDGE = 1024
 
 interface ModerationResponse {
     allowed?: boolean
+    reason?: string
 }
 
 export async function moderateImage(file: File, signal: AbortSignal) {
@@ -34,7 +35,7 @@ export async function moderateImage(file: File, signal: AbortSignal) {
         })
         const result = await response.json().catch(() => null) as ModerationResponse | null
         if (!response.ok || typeof result?.allowed !== 'boolean') {
-            throw new Error('MODERATION_UNAVAILABLE')
+            throw new Error(result?.reason ?? 'unknown')
         }
 
         return result.allowed

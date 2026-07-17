@@ -58,7 +58,7 @@ export default {
         const apiKey = process.env.OPENAI_API_KEY
         if (!apiKey) {
             console.error(JSON.stringify({event: 'moderation_unavailable', reason: 'missing_api_key'}))
-            return json({code: 'MODERATION_UNAVAILABLE'}, 503)
+            return json({code: 'MODERATION_UNAVAILABLE', reason: 'not_configured'}, 503)
         }
 
         try {
@@ -77,25 +77,40 @@ export default {
             })
 
             if (!response.ok) {
-                console.error(JSON.stringify({event: 'moderation_failed', status: response.status}))
-                return json({code: 'MODERATION_UNAVAILABLE'}, 503)
+                console.error(JSON.stringify({
+                    event: 'moderation_failed',
+                    status: response.status,
+                    requestId: response.headers.get('x-request-id'),
+                }))
+                const reason = response.status === 401 || response.status === 403
+                    ? 'credentials_rejected'
+                    : response.status === 429
+                        ? 'rate_limited'
+                        : response.status >= 400 && response.status < 500
+                            ? 'request_rejected'
+                            : 'upstream_unavailable'
+                return json({code: 'MODERATION_UNAVAILABLE', reason}, 503)
             }
 
             const moderation = await response.json() as ModerationResponse
             const categories = moderation.results?.[0]?.categories
             if (!categories || typeof categories.sexual !== 'boolean') {
                 console.error(JSON.stringify({event: 'moderation_invalid_response'}))
-                return json({code: 'MODERATION_UNAVAILABLE'}, 503)
+                return json({code: 'MODERATION_UNAVAILABLE', reason: 'invalid_response'}, 503)
             }
 
             const explicit = categories.sexual || categories['sexual/minors'] === true
             return json({allowed: !explicit})
         } catch (error) {
+            const errorName = error instanceof Error ? error.name : 'unknown'
             console.error(JSON.stringify({
                 event: 'moderation_failed',
-                reason: error instanceof Error ? error.name : 'unknown',
+                reason: errorName,
             }))
-            return json({code: 'MODERATION_UNAVAILABLE'}, 503)
+            return json({
+                code: 'MODERATION_UNAVAILABLE',
+                reason: errorName === 'TimeoutError' ? 'timeout' : 'network',
+            }, 503)
         }
     },
 }

@@ -602,11 +602,23 @@ function TesseraMap({
                                 status: 'approved',
                                 message: 'Image passed the safety check.',
                             })
-                        } catch {
+                        } catch (error) {
                             if (!controller.signal.aborted) {
+                                const failureMessages: Record<string, string> = {
+                                    not_configured: 'Image moderation is not configured on this deployment.',
+                                    credentials_rejected: 'The moderation API key was rejected. Check the production key.',
+                                    rate_limited: 'Image moderation is temporarily rate limited. Try again shortly.',
+                                    request_rejected: 'The moderation service rejected this image. Try a different file.',
+                                    upstream_unavailable: 'Image moderation is temporarily unavailable. Try again shortly.',
+                                    invalid_response: 'Image moderation returned an invalid response. Try again shortly.',
+                                    timeout: 'Image moderation timed out. Try again.',
+                                    network: 'The moderation service could not be reached. Try again shortly.',
+                                }
                                 setUploadModeration({
                                     status: 'error',
-                                    message: 'We couldn’t verify this image. Try again before minting.',
+                                    message: error instanceof Error && failureMessages[error.message]
+                                        ? failureMessages[error.message]
+                                        : `We couldn’t verify this image. Try again before ${demoMode ? 'placing' : 'minting'}.`,
                                 })
                             }
                         } finally {
