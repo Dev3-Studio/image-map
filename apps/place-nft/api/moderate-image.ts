@@ -1,17 +1,6 @@
+import OpenAI from 'openai'
+
 const MAX_IMAGE_DATA_LENGTH = 2_000_000
-
-interface ModerationResponse {
-    results?: Array<{
-        categories?: Record<string, boolean>
-    }>
-}
-
-interface OpenAIErrorResponse {
-    error?: {
-        code?: string
-        type?: string
-    }
-}
 
 function json(body: Record<string, unknown>, status = 200) {
     return Response.json(body, {
@@ -69,42 +58,18 @@ export default {
         }
 
         try {
-            const response = await fetch('https://api.openai.com/v1/moderations', {
-                method: 'POST',
-                headers: {
-                    authorization: `Bearer ${apiKey}`,
-                    'content-type': 'application/json',
-                },
-                body: JSON.stringify({
+            const openai = new OpenAI({
+                apiKey,
+                maxRetries: 0,
+                timeout: 8_000,
+            })
+            const moderation = await openai.moderations.create(
+                {
                     model: 'omni-moderation-latest',
                     input: [{type: 'image_url', image_url: {url: image}}],
-                }),
-                cache: 'no-store',
-                signal: AbortSignal.any([request.signal, AbortSignal.timeout(8_000)]),
-            })
-
-            if (!response.ok) {
-                const failure = await response.json().catch(() => null) as OpenAIErrorResponse | null
-                const upstreamCode = failure?.error?.code ?? failure?.error?.type ?? 'unknown'
-                console.error(JSON.stringify({
-                    event: 'moderation_failed',
-                    status: response.status,
-                    upstreamCode,
-                    requestId: response.headers.get('x-request-id'),
-                }))
-                const reason = response.status === 401 || response.status === 403
-                    ? 'credentials_rejected'
-                    : response.status === 429
-                        ? upstreamCode === 'insufficient_quota'
-                            ? 'quota_exhausted'
-                            : 'rate_limited'
-                        : response.status >= 400 && response.status < 500
-                            ? 'request_rejected'
-                            : 'upstream_unavailable'
-                return json({code: 'MODERATION_UNAVAILABLE', reason}, 503)
-            }
-
-            const moderation = await response.json() as ModerationResponse
+                },
+                {signal: request.signal},
+            )
             const categories = moderation.results?.[0]?.categories
             if (!categories || typeof categories.sexual !== 'boolean') {
                 console.error(JSON.stringify({event: 'moderation_invalid_response'}))
@@ -114,6 +79,30 @@ export default {
             const explicit = categories.sexual || categories['sexual/minors'] === true
             return json({allowed: !explicit})
         } catch (error) {
+            if (error instanceof OpenAI.APIError) {
+                const upstreamCode = error.code ?? error.type ?? 'unknown'
+                console.error(JSON.stringify({
+                    event: 'moderation_failed',
+                    status: error.status,
+                    upstreamCode,
+                    message: error.message,
+                    requestId: error.requestID,
+                    retryAfter: error.headers?.get('retry-after'),
+                    rateLimitRemainingRequests: error.headers?.get('x-ratelimit-remaining-requests'),
+                    rateLimitResetRequests: error.headers?.get('x-ratelimit-reset-requests'),
+                }))
+                const reason = error.status === 401 || error.status === 403
+                    ? 'credentials_rejected'
+                    : error.status === 429
+                        ? upstreamCode === 'insufficient_quota'
+                            ? 'quota_exhausted'
+                            : 'rate_limited'
+                        : error.status && error.status >= 400 && error.status < 500
+                            ? 'request_rejected'
+                            : 'upstream_unavailable'
+                return json({code: 'MODERATION_UNAVAILABLE', reason}, 503)
+            }
+
             const errorName = error instanceof Error ? error.name : 'unknown'
             console.error(JSON.stringify({
                 event: 'moderation_failed',
@@ -121,7 +110,7 @@ export default {
             }))
             return json({
                 code: 'MODERATION_UNAVAILABLE',
-                reason: errorName === 'TimeoutError' ? 'timeout' : 'network',
+                reason: error instanceof OpenAI.APIConnectionTimeoutError ? 'timeout' : 'network',
             }, 503)
         }
     },
